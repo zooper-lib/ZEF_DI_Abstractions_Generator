@@ -1,8 +1,8 @@
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 
 @RegisterInstance()
-class InstanceClass {
+class ServiceA {
   void doSomething() {
-    print('I am doing something');
+    print('ServiceA.doSomething');
   }
 }

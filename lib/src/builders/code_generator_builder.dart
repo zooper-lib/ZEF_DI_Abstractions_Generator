@@ -17,14 +17,20 @@ class CodeGeneratorBuilder implements Builder {
   Future<void> build(BuildStep buildStep) async {
     final StringBuffer codeBuffer = StringBuffer();
     final Set<String> importPaths = await _collectImportPaths(buildStep);
-    final Set<String> registrationSnippets =
-        await _collectRegistrationSnippets(buildStep);
+
+    final List<InstanceData> allInstanceData =
+        await _readAllInstanceData(buildStep);
+
+    // Analyze dependencies and topologically sort the instances
+    // This part of the implementation depends on how you choose to represent and sort the dependency graph
+    final List<InstanceData> sortedInstances =
+        _topologicallySortInstances(allInstanceData);
 
     // Generate the code
     _writeHeader(codeBuffer);
     _writeImports(codeBuffer, importPaths);
     _writeRegistrationFunctionStart(codeBuffer);
-    _writeRegistrationFunction(codeBuffer, registrationSnippets);
+    _writeRegistrationFunction(codeBuffer, sortedInstances);
     _writeRegistrationFunctionEnd(codeBuffer);
 
     // Format the code
@@ -32,6 +38,71 @@ class CodeGeneratorBuilder implements Builder {
 
     // Write the generated file
     await _writeGeneratedFile(buildStep, formattedCode);
+  }
+
+  Future<List<InstanceData>> _readAllInstanceData(BuildStep buildStep) async {
+    final List<InstanceData> instances = [];
+
+    await for (final inputId in buildStep.findAssets(Glob('**/*.info.json'))) {
+      final content = await buildStep.readAsString(inputId);
+      final List<dynamic> jsonData = json.decode(content);
+
+      for (final jsonItem in jsonData) {
+        instances
+            .add(InstanceData.fromJson(Map<String, dynamic>.from(jsonItem)));
+      }
+    }
+
+    return instances;
+  }
+
+  List<InstanceData> _topologicallySortInstances(List<InstanceData> instances) {
+    // Build the graph
+    final Map<String, Set<String>> graph = {};
+    final Map<String, InstanceData> instanceLookup = {};
+
+    // Initialize graph and lookup table
+    for (var instance in instances) {
+      graph[instance.className] = instance.dependencies.toSet();
+      instanceLookup[instance.className] = instance;
+    }
+
+    // Perform topological sort
+    final List<String> sortedClassNames = _performTopologicalSort(graph);
+
+    // Map sorted class names back to their corresponding InstanceData
+    final List<InstanceData> sortedInstances = [];
+    for (var className in sortedClassNames) {
+      if (instanceLookup.containsKey(className)) {
+        sortedInstances.add(instanceLookup[className]!);
+      }
+    }
+
+    return sortedInstances;
+  }
+
+  List<String> _performTopologicalSort(Map<String, Set<String>> graph) {
+    final List<String> sorted = [];
+    final Set<String> visited = {};
+    final Set<String> visiting = {};
+
+    void visit(String node) {
+      if (visited.contains(node)) return;
+      if (visiting.contains(node)) {
+        throw Exception('Cyclic dependency detected in $node');
+      }
+
+      visiting.add(node);
+      for (var dep in graph[node]!) {
+        visit(dep);
+      }
+      visiting.remove(node);
+      visited.add(node);
+      sorted.add(node);
+    }
+
+    graph.keys.forEach(visit);
+    return sorted;
   }
 
   Future<Set<String>> _collectImportPaths(BuildStep buildStep) async {
@@ -66,10 +137,22 @@ class CodeGeneratorBuilder implements Builder {
       for (final jsonItem in jsonData) {
         final instanceData =
             InstanceData.fromJson(Map<String, dynamic>.from(jsonItem));
-        // Prepare the registration code snippet for this instance
-        String snippet =
-            "ServiceLocator.I.registerInstance<${instanceData.className}>(${instanceData.className}());";
-        registrationSnippets.add(snippet);
+
+        String registration;
+        if (instanceData.dependencies.isEmpty) {
+          // No dependencies, simple registration
+          registration =
+              "ServiceLocator.I.registerInstance<${instanceData.className}>(${instanceData.className}());";
+        } else {
+          // Resolve dependencies
+          String resolvedParams = instanceData.dependencies
+              .map((param) => "ServiceLocator.I.resolve<$param>()")
+              .join(', ');
+
+          registration =
+              "ServiceLocator.I.registerInstance<${instanceData.className}>(${instanceData.className}($resolvedParams));";
+        }
+        registrationSnippets.add(registration);
       }
     }
 
@@ -94,8 +177,29 @@ class CodeGeneratorBuilder implements Builder {
   }
 
   void _writeRegistrationFunction(
-      StringBuffer buffer, Set<String> registrationSnippets) {
-    registrationSnippets.forEach(buffer.writeln);
+      StringBuffer buffer, List<InstanceData> sortedInstances) {
+    for (var instance in sortedInstances) {
+      // Start the registration line
+      String registrationLine =
+          "ServiceLocator.I.registerInstance<${instance.className}>(";
+
+      // If there are dependencies, resolve them within the constructor call
+      if (instance.dependencies.isNotEmpty) {
+        String resolvedDependencies = instance.dependencies
+            .map((dep) => "ServiceLocator.I.resolve<$dep>()")
+            .join(', ');
+        registrationLine += "${instance.className}($resolvedDependencies)";
+      } else {
+        // No dependencies, just instantiate the class
+        registrationLine += "${instance.className}()";
+      }
+
+      // Close the registration line
+      registrationLine += ");";
+
+      // Write the registration line to the buffer
+      buffer.writeln(registrationLine);
+    }
   }
 
   void _writeRegistrationFunctionEnd(StringBuffer buffer) {
