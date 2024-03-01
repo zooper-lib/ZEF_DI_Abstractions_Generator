@@ -1,0 +1,23 @@
+name: zef_di_abstractions_generator
+description: A starting point for Dart libraries or applications.
+version: 1.0.0
+# repository: https://github.com/my_org/my_repo
+
+environment:
+  sdk: ^3.0.5
+
+dependencies:
+  analyzer: ^6.2.0
+  build:
+  source_gen:
+  glob:
+  dart_style:
+
+  zef_di_abstractions:
+    path: ../ZEF_DI_Abstractions
+
+dev_dependencies:
+  lints: ^3.0.0
+  test: ^1.24.0
+
+  build_runner:

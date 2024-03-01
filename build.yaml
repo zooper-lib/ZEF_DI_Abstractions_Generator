@@ -1,0 +1,31 @@
+targets:
+  $default:
+    builders:
+      zef_di_abstractions_generator|dependencyBuilder:
+        enabled: true
+
+builders:
+  # Define the first builder that collects information
+  information_collector:
+    import: "package:zef_di_abstractions_generator/zef_di_abstractions_generator.dart"
+    builder_factories: ["informationCollectorBuilder"]
+    build_extensions: { ".dart": [".info.json"] }
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["zef_di_abstractions_generator:code_generator"]
+
+  # Define the second builder that generates code based on collected information
+  code_generator:
+    import: "package:zef_di_abstractions_generator/zef_di_abstractions_generator.dart"
+    builder_factories: ["codeGeneratorBuilder"]
+    build_extensions: { "$lib$": ["aggregate.dart"] }
+    auto_apply: dependents
+    build_to: source
+    required_inputs: ["**/*.info.json"]
+#  handlerGeneratorBuilder:
+#    import: "package:zef_di_abstractions_generator/zef_di_abstractions_generator.dart"
+#    builder_factories: ["dependencyBuilder"]
+#    build_extensions: { ".dart": [".generated.dart"] }
+#    build_to: cache
+#    auto_apply: dependents
+#    applies_builders: ["source_gen|combining_builder"]
