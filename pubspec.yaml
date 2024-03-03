@@ -12,6 +12,7 @@ dependencies:
   source_gen:
   glob:
   dart_style:
+  collection:
 
   zef_di_abstractions:
     path: ../ZEF_DI_Abstractions
