@@ -15,42 +15,51 @@ class CodeGeneratorBuilder implements Builder {
 
   @override
   Future<void> build(BuildStep buildStep) async {
-    final StringBuffer codeBuffer = StringBuffer();
-    final Set<String> importPaths = await _collectImportPaths(buildStep);
+    final codeBuffer = StringBuffer();
+    final importPaths = await _collectImportPaths(buildStep);
+    final sortedInstances = await _getSortedInstances(buildStep);
 
-    final List<InstanceData> allInstanceData =
-        await _readAllInstanceData(buildStep);
-
-    // Analyze dependencies and topologically sort the instances
-    // This part of the implementation depends on how you choose to represent and sort the dependency graph
-    final List<InstanceData> sortedInstances =
-        _topologicallySortInstances(allInstanceData);
-
-    // Generate the code
     _writeHeader(codeBuffer);
     _writeImports(codeBuffer, importPaths);
-    _writeRegistrationFunctionStart(codeBuffer);
     _writeRegistrationFunction(codeBuffer, sortedInstances);
-    _writeRegistrationFunctionEnd(codeBuffer);
 
-    // Format the code
-    final String formattedCode = _formatCode(codeBuffer.toString());
-
-    // Write the generated file
-    await _writeGeneratedFile(buildStep, formattedCode);
+    await _writeGeneratedFile(buildStep, codeBuffer.toString());
   }
 
-  Future<List<InstanceData>> _readAllInstanceData(BuildStep buildStep) async {
-    final List<InstanceData> instances = [];
+  Future<Set<String>> _collectImportPaths(BuildStep buildStep) async {
+    final importPaths = {
+      'package:zef_di_abstractions/zef_di_abstractions.dart'
+    };
 
     await for (final inputId in buildStep.findAssets(Glob('**/*.info.json'))) {
       final content = await buildStep.readAsString(inputId);
-      final List<dynamic> jsonData = json.decode(content);
+      final jsonData = json.decode(content) as List<dynamic>;
 
-      for (final jsonItem in jsonData) {
-        instances
-            .add(InstanceData.fromJson(Map<String, dynamic>.from(jsonItem)));
+      for (var jsonItem in jsonData) {
+        final info = InstanceData.fromJson(Map<String, dynamic>.from(jsonItem));
+        if (Uri.parse(info.importPath).scheme == 'package') {
+          importPaths.add(info.importPath);
+        }
       }
+    }
+
+    return importPaths;
+  }
+
+  Future<List<InstanceData>> _getSortedInstances(BuildStep buildStep) async {
+    final instances = await _readAllInstanceData(buildStep);
+    return _topologicallySortInstances(instances);
+  }
+
+  Future<List<InstanceData>> _readAllInstanceData(BuildStep buildStep) async {
+    final instances = <InstanceData>[];
+
+    await for (final inputId in buildStep.findAssets(Glob('**/*.info.json'))) {
+      final content = await buildStep.readAsString(inputId);
+      final jsonData = json.decode(content) as List<dynamic>;
+
+      instances.addAll(jsonData.map((jsonItem) =>
+          InstanceData.fromJson(Map<String, dynamic>.from(jsonItem))));
     }
 
     return instances;
@@ -105,116 +114,46 @@ class CodeGeneratorBuilder implements Builder {
     return sorted;
   }
 
-  Future<Set<String>> _collectImportPaths(BuildStep buildStep) async {
-    final Set<String> importPaths = {};
-
-    // Add the ServiceLocator import
-    importPaths.add('package:zef_di_abstractions/zef_di_abstractions.dart');
-
-    // Collect all the import paths from the info files
-    await for (final inputId in buildStep.findAssets(Glob('**/*.info.json'))) {
-      final content = await buildStep.readAsString(inputId);
-      final List<dynamic> jsonData = json.decode(content);
-
-      for (final jsonItem in jsonData) {
-        final info = InstanceData.fromJson(Map<String, dynamic>.from(jsonItem));
-        if (Uri.parse(info.importPath).scheme == 'package') {
-          importPaths.add(info.importPath);
-        }
-      }
-    }
-
-    return importPaths;
-  }
-
-  Future<Set<String>> _collectRegistrationSnippets(BuildStep buildStep) async {
-    final Set<String> registrationSnippets = {};
-
-    await for (final inputId in buildStep.findAssets(Glob('**/*.info.json'))) {
-      final content = await buildStep.readAsString(inputId);
-      final List<dynamic> jsonData = json.decode(content);
-
-      for (final jsonItem in jsonData) {
-        final instanceData =
-            InstanceData.fromJson(Map<String, dynamic>.from(jsonItem));
-
-        String registration;
-        if (instanceData.dependencies.isEmpty) {
-          // No dependencies, simple registration
-          registration =
-              "ServiceLocator.I.registerInstance<${instanceData.className}>(${instanceData.className}());";
-        } else {
-          // Resolve dependencies
-          String resolvedParams = instanceData.dependencies
-              .map((param) => "ServiceLocator.I.resolve<$param>()")
-              .join(', ');
-
-          registration =
-              "ServiceLocator.I.registerInstance<${instanceData.className}>(${instanceData.className}($resolvedParams));";
-        }
-        registrationSnippets.add(registration);
-      }
-    }
-
-    return registrationSnippets;
-  }
-
   void _writeHeader(StringBuffer buffer) {
-    buffer.writeln("// GENERATED CODE - DO NOT MODIFY BY HAND");
-    buffer.writeln(
-        "// ******************************************************************************\n");
+    buffer
+      ..writeln("// GENERATED CODE - DO NOT MODIFY BY HAND")
+      ..writeln(
+          "// ******************************************************************************\n");
   }
 
   void _writeImports(StringBuffer buffer, Set<String> importPaths) {
-    for (String importPath in importPaths) {
-      buffer.writeln("import '$importPath';");
+    for (var path in importPaths) {
+      buffer.writeln("import '$path';");
     }
-    buffer.writeln(); // Add an empty line after imports for readability
-  }
-
-  void _writeRegistrationFunctionStart(StringBuffer buffer) {
-    buffer.writeln("void registerGeneratedDependencies() {");
+    buffer.writeln();
   }
 
   void _writeRegistrationFunction(
       StringBuffer buffer, List<InstanceData> sortedInstances) {
+    buffer.writeln("void registerGeneratedDependencies() {");
+
     for (var instance in sortedInstances) {
-      // Start the registration line
-      String registrationLine =
-          "ServiceLocator.I.registerInstance<${instance.className}>(";
-
-      // If there are dependencies, resolve them within the constructor call
-      if (instance.dependencies.isNotEmpty) {
-        String resolvedDependencies = instance.dependencies
-            .map((dep) => "ServiceLocator.I.resolve<$dep>()")
-            .join(', ');
-        registrationLine += "${instance.className}($resolvedDependencies)";
-      } else {
-        // No dependencies, just instantiate the class
-        registrationLine += "${instance.className}()";
-      }
-
-      // Close the registration line
-      registrationLine += ");";
-
-      // Write the registration line to the buffer
+      final dependencies = instance.dependencies
+          .map((d) => "ServiceLocator.I.resolve<$d>()")
+          .join(', ');
+      final registrationLine =
+          "  ServiceLocator.I.registerInstance<${instance.className}>(${instance.className}(${dependencies.isNotEmpty ? dependencies : ''}));";
       buffer.writeln(registrationLine);
     }
-  }
 
-  void _writeRegistrationFunctionEnd(StringBuffer buffer) {
     buffer.writeln("}\n");
   }
 
-  String _formatCode(String code) {
-    final DartFormatter formatter = DartFormatter();
-    return formatter.format(code);
-  }
-
   Future<void> _writeGeneratedFile(BuildStep buildStep, String content) async {
+    final formattedContent = _formatCode(content);
     await buildStep.writeAsString(
       AssetId(buildStep.inputId.package, 'lib/service_locator.g.dart'),
-      content,
+      formattedContent,
     );
+  }
+
+  String _formatCode(String code) {
+    final formatter = DartFormatter();
+    return formatter.format(code);
   }
 }
