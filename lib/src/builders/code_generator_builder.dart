@@ -58,12 +58,11 @@ class CodeGeneratorBuilder implements Builder {
 
       for (var jsonItem in jsonData) {
         final data = Map<String, dynamic>.from(jsonItem);
-        if (data.containsKey('dependencies')) {
-          // Assuming dependencies indicate an InstanceData
-          registrations.add(InstanceData.fromJson(data));
-        } else if (data.containsKey('factoryMethod')) {
-          // Assuming factoryMethod indicates a FactoryData
+
+        if (data.containsKey('factoryMethod')) {
           registrations.add(FactoryData.fromJson(data));
+        } else {
+          registrations.add(InstanceData.fromJson(data));
         }
       }
     }
@@ -95,8 +94,10 @@ class CodeGeneratorBuilder implements Builder {
 
     for (var registration in registrations) {
       if (registration is InstanceData) {
+        print('Generating instance registration for ${registration.className}');
         buffer.writeln(_generateInstanceRegistration(registration));
       } else if (registration is FactoryData) {
+        print('Generating factory registration for ${registration.className}');
         buffer.writeln(_generateFactoryRegistration(registration));
       }
     }
@@ -108,29 +109,23 @@ class CodeGeneratorBuilder implements Builder {
     final dependencies = instance.dependencies
         .map((d) => "ServiceLocator.I.resolve<$d>()")
         .join(', ');
-    return "  ServiceLocator.I.registerInstance<${instance.className}>(${instance.className}(${dependencies.isNotEmpty ? dependencies : ''}));";
+    return "ServiceLocator.I.registerInstance<${instance.className}>(${instance.className}(${dependencies.isNotEmpty ? dependencies : ''}));";
   }
 
   String _generateFactoryRegistration(FactoryData factory) {
-    String registrationCode;
+    // Initialize the dependencies resolution string
+    String dependencies = factory.dependencies
+        .map((dep) => "ServiceLocator.I.resolve<$dep>()")
+        .join(', ');
 
-    if (factory.factoryMethod != null) {
-      // For factory methods, resolve dependencies within the method call
-      String dependencies = factory.dependencies
-          .map((dep) => "ServiceLocator.I.resolve<$dep>()")
-          .join(', ');
-      registrationCode =
-          "ServiceLocator.I.registerFactory<${factory.className}>(() => ${factory.className}.${factory.factoryMethod}($dependencies));";
+    // Check if there's a factory method specified
+    if (factory.factoryMethod != null && factory.factoryMethod!.isNotEmpty) {
+      // If a factory method is specified, use it in the registration code
+      return "ServiceLocator.I.registerFactory<${factory.className}>((serviceLocator, namedArgs) => ${factory.className}.${factory.factoryMethod}($dependencies));";
     } else {
-      // For default constructors, resolve dependencies within the constructor call
-      String dependencies = factory.dependencies
-          .map((dep) => "ServiceLocator.I.resolve<$dep>()")
-          .join(', ');
-      registrationCode =
-          "ServiceLocator.I.registerFactory<${factory.className}>(() => ${factory.className}($dependencies));";
+      // If no factory method is specified, use the constructor with resolved dependencies
+      return "ServiceLocator.I.registerFactory<${factory.className}>((serviceLocator, namedArgs) => ${factory.className}($dependencies));";
     }
-
-    return registrationCode;
   }
 
   Future<void> _writeGeneratedFile(BuildStep buildStep, String content) async {

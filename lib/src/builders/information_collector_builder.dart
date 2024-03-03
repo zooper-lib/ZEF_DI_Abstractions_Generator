@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
-import 'package:collection/collection.dart';
 import 'package:source_gen/source_gen.dart';
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 
@@ -19,24 +18,32 @@ class InformationCollectorBuilder implements Builder {
     final resolver = buildStep.resolver;
     if (!await resolver.isLibrary(buildStep.inputId)) return;
 
-    final library = await buildStep.inputLibrary;
-    final annotations = LibraryReader(library)
-        .annotatedWith(TypeChecker.fromRuntime(Registration));
-
+    final LibraryElement library = await buildStep.inputLibrary;
     final List<RegistrationData> collectedRegistrations = [];
 
-    for (var annotatedElement in annotations) {
-      final element = annotatedElement.element;
-      final annotation = annotatedElement.annotation;
+    for (var element in library.topLevelElements) {
+      if (element is ClassElement) {
+        bool isRegisterInstance = false;
+        bool isRegisterFactory = false;
 
-      if (element is! ClassElement) continue;
+        for (var annotation in element.metadata) {
+          var annotationReader =
+              ConstantReader(annotation.computeConstantValue());
+          if (_isRegisterInstanceAnnotation(annotationReader)) {
+            isRegisterInstance = true;
+            break;
+          } else if (_isRegisterFactoryAnnotation(annotationReader)) {
+            isRegisterFactory = true;
+          }
+        }
 
-      if (_isRegisterInstanceAnnotation(annotation)) {
-        collectedRegistrations.add(_collectInstanceData(element));
-        print('Collected instance data for ${element.name}');
-      } else if (_isRegisterFactoryAnnotation(annotation)) {
-        collectedRegistrations.add(_collectFactoryData(element));
-        print('Collected factory data for ${element.name}');
+        if (isRegisterInstance) {
+          collectedRegistrations.add(_collectInstanceData(element));
+          print('Collected instance data for ${element.name}');
+        } else if (isRegisterFactory) {
+          collectedRegistrations.add(_collectFactoryData(element));
+          print('Collected factory data for ${element.name}');
+        }
       }
     }
 
@@ -55,7 +62,6 @@ class InformationCollectorBuilder implements Builder {
   }
 
   InstanceData _collectInstanceData(ClassElement element) {
-    // Collect and return data for an instance registration
     List<String> constructorParams = _getConstructorParams(element);
     return InstanceData(
       importPath: element.librarySource.uri.toString(),
@@ -69,20 +75,25 @@ class InformationCollectorBuilder implements Builder {
     List<String> constructorParams = _getConstructorParams(element);
     String? factoryMethodName = _findAnnotatedFactoryMethodName(element);
 
-    // Collect and return data for a factory registration
     return FactoryData(
       importPath: element.librarySource.uri.toString(),
       className: element.name,
       dependencies: constructorParams,
       factoryMethod: factoryMethodName,
       interfaces: [], // Collect interfaces if needed
-      // Add other fields as necessary
     );
   }
 
   String? _findAnnotatedFactoryMethodName(ClassElement element) {
-    // Implement logic to find a method annotated to act as the factory
-    // Return the method name if found, otherwise return null
+    for (var method in element.methods) {
+      // Check if the method is annotated with @RegisterFactoryMethod
+      var annotation = TypeChecker.fromRuntime(RegisterFactoryMethod)
+          .firstAnnotationOfExact(method);
+      if (annotation != null) {
+        return method.name;
+      }
+    }
+    // Return null if no annotated factory method is found
     return null;
   }
 

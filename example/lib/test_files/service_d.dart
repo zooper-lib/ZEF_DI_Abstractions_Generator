@@ -13,6 +13,7 @@ class ServiceD {
     print('ServiceD: doing something');
   }
 
+  @RegisterFactoryMethod()
   static ServiceD create(ServiceA serviceA) {
     return ServiceD(serviceA);
   }
