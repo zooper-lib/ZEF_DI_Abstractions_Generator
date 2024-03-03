@@ -113,18 +113,37 @@ class CodeGeneratorBuilder implements Builder {
   }
 
   String _generateFactoryRegistration(FactoryData factory) {
-    // Initialize the dependencies resolution string
+    // Initialize the dependencies resolution string for unnamed parameters
     String dependencies = factory.dependencies
-        .map((dep) => "ServiceLocator.I.resolve<$dep>()")
+        .map((dep) => "serviceLocator.resolve<$dep>()")
         .join(', ');
+
+    // Prepare the string for named arguments, if any
+    String namedArgs = factory.namedArgs.entries
+        .map((e) => "${e.key}: namedArgs['${e.key}'] as ${e.value}")
+        .join(', ');
+
+    // Combine dependencies and named arguments, if needed
+    String allArgs =
+        [dependencies, namedArgs].where((arg) => arg.isNotEmpty).join(', ');
 
     // Check if there's a factory method specified
     if (factory.factoryMethod != null && factory.factoryMethod!.isNotEmpty) {
       // If a factory method is specified, use it in the registration code
-      return "ServiceLocator.I.registerFactory<${factory.className}>((serviceLocator, namedArgs) => ${factory.className}.${factory.factoryMethod}($dependencies));";
+      return '''
+          ServiceLocator.I.registerFactory<${factory.className}>(
+            (serviceLocator, namedArgs) => ${factory.className}.${factory.factoryMethod}($allArgs)
+          );
+        '''
+          .trim();
     } else {
-      // If no factory method is specified, use the constructor with resolved dependencies
-      return "ServiceLocator.I.registerFactory<${factory.className}>((serviceLocator, namedArgs) => ${factory.className}($dependencies));";
+      // If no factory method is specified, use the constructor with resolved dependencies and named arguments
+      return '''
+          ServiceLocator.I.registerFactory<${factory.className}>(
+            (serviceLocator, namedArgs) => ${factory.className}($allArgs)
+          );
+        '''
+          .trim();
     }
   }
 

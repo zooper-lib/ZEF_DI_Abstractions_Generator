@@ -73,12 +73,14 @@ class InstanceData extends RegistrationData {
 class FactoryData extends RegistrationData {
   final List<String> dependencies;
   final String? factoryMethod;
+  final Map<String, String> namedArgs;
 
   FactoryData({
     required super.importPath,
     required super.className,
     this.dependencies = const [],
     this.factoryMethod,
+    this.namedArgs = const {},
     super.interfaces,
     super.name,
     super.key,
@@ -91,6 +93,7 @@ class FactoryData extends RegistrationData {
     json.addAll({
       'dependencies': dependencies,
       'factoryMethod': factoryMethod,
+      'namedArgs': namedArgs,
     });
     return json;
   }
@@ -101,6 +104,7 @@ class FactoryData extends RegistrationData {
       className: json['className'],
       dependencies: List<String>.from(json['dependencies'] ?? []),
       factoryMethod: json['factoryMethod'],
+      namedArgs: Map<String, String>.from(json['namedArgs'] ?? {}),
       interfaces: List<String>.from(json['interfaces'] ?? []),
       name: json['name'],
       key: json['key'],

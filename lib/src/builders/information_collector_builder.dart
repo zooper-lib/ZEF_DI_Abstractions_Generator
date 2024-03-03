@@ -72,15 +72,30 @@ class InformationCollectorBuilder implements Builder {
   }
 
   FactoryData _collectFactoryData(ClassElement element) {
+    // Collect unnamed constructor parameters
     List<String> constructorParams = _getConstructorParams(element);
     String? factoryMethodName = _findAnnotatedFactoryMethodName(element);
+    Map<String, String> namedArgs = {};
+
+    if (factoryMethodName != null) {
+      // Factory method is present, collect named arguments from it
+      MethodElement factoryMethod = element.getMethod(factoryMethodName)!;
+      namedArgs = _getNamedParameters(factoryMethod);
+    } else {
+      // No factory method, collect named arguments from the constructor
+      ConstructorElement? constructor =
+          element.unnamedConstructor ?? element.constructors.first;
+      namedArgs = _getNamedParametersFromConstructor(constructor);
+    }
 
     return FactoryData(
       importPath: element.librarySource.uri.toString(),
       className: element.name,
-      dependencies: constructorParams,
+      dependencies:
+          constructorParams, // Unnamed parameters from the constructor
       factoryMethod: factoryMethodName,
-      interfaces: [], // Collect interfaces if needed
+      namedArgs:
+          namedArgs, // Named arguments from either factory method or constructor
     );
   }
 
@@ -108,6 +123,21 @@ class InformationCollectorBuilder implements Builder {
             (param) => !param.isNamed) // Optionally, exclude named parameters
         .map((param) => param.type.getDisplayString(withNullability: false))
         .toList(); // Provide an empty list as a fallback if 'constructor' is null
+  }
+
+  Map<String, String> _getNamedParameters(ExecutableElement method) {
+    return Map.fromEntries(method.parameters
+        .where((param) => param.isNamed)
+        .map((param) => MapEntry(
+            param.name, param.type.getDisplayString(withNullability: false))));
+  }
+
+  Map<String, String> _getNamedParametersFromConstructor(
+      ConstructorElement constructor) {
+    return Map.fromEntries(constructor.parameters
+        .where((param) => param.isNamed)
+        .map((param) => MapEntry(
+            param.name, param.type.getDisplayString(withNullability: false))));
   }
 
   Future<void> _writeCollectedData(

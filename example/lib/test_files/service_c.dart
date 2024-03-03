@@ -4,7 +4,7 @@ import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 import 'service_a.dart';
 import 'service_b.dart';
 
-@RegisterInstance()
+@RegisterFactory()
 class ServiceC {
   final ServiceA serviceA;
   final ServiceB serviceB;
