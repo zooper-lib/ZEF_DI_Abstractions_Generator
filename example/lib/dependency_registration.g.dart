@@ -8,7 +8,7 @@ import 'package:example/test_files/service_b.dart';
 import 'package:example/test_files/service_c.dart';
 import 'package:example/test_files/service_d.dart';
 
-void registerGeneratedDependencies() {
+void registerDependencies() {
   ServiceLocator.I.registerInstance<ServiceA>(
     ServiceA(),
     interfaces: [ServiceA, Object, AbstractService],

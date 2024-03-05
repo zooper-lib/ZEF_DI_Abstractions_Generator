@@ -11,7 +11,7 @@ import '../models/registrations.dart';
 class CodeGeneratorBuilder implements Builder {
   @override
   Map<String, List<String>> get buildExtensions => {
-        r'$lib$': ['service_locator.g.dart']
+        r'$lib$': ['dependency_registration.g.dart']
       };
 
   @override
@@ -96,8 +96,11 @@ class CodeGeneratorBuilder implements Builder {
   }
 
   void _writeRegistrationFunctions(
-      StringBuffer buffer, List<RegistrationData> registrations) {
-    buffer.writeln("void registerGeneratedDependencies() {");
+    StringBuffer buffer,
+    List<RegistrationData> registrations,
+  ) {
+    // Write the function signature
+    buffer.writeln("void registerDependencies() {");
 
     for (var registration in registrations) {
       if (registration is InstanceData) {
@@ -105,6 +108,9 @@ class CodeGeneratorBuilder implements Builder {
       } else if (registration is FactoryData) {
         buffer.writeln(_generateFactoryRegistration(registration));
       }
+
+      // Add a newline after each registration
+      buffer.writeln();
     }
 
     buffer.writeln("}");
@@ -128,7 +134,14 @@ class CodeGeneratorBuilder implements Builder {
         ? "environment: '${instance.environment}'"
         : 'environment: null';
 
-    return "ServiceLocator.I.registerInstance<${instance.className}>(${instance.className}(${dependencies.isNotEmpty ? dependencies : ''}), $interfaces, $name, $key, $environment,);";
+    return '''
+        ServiceLocator.I.registerInstance<${instance.className}>(${instance.className}(
+          ${dependencies.isNotEmpty ? dependencies : ''}),
+          $interfaces,
+          $name,
+          $key,
+          $environment,
+        );''';
   }
 
   String _generateFactoryRegistration(FactoryData factory) {
@@ -164,7 +177,12 @@ class CodeGeneratorBuilder implements Builder {
       // If a factory method is specified, use it in the registration code
       return '''
           ServiceLocator.I.registerFactory<${factory.className}>(
-            (serviceLocator, namedArgs) => ${factory.className}.${factory.factoryMethod}($allArgs), $interfaces, $name, $key, $environment,
+            (serviceLocator, namedArgs) => ${factory.className}.${factory.factoryMethod}(
+              $allArgs),
+              $interfaces,
+              $name,
+              $key,
+              $environment,
           );
         '''
           .trim();
@@ -172,7 +190,12 @@ class CodeGeneratorBuilder implements Builder {
       // If no factory method is specified, use the constructor with resolved dependencies and named arguments
       return '''
           ServiceLocator.I.registerFactory<${factory.className}>(
-            (serviceLocator, namedArgs) => ${factory.className}($allArgs), $interfaces, $name, $key, $environment,
+            (serviceLocator, namedArgs) => ${factory.className}(
+              $allArgs),
+              $interfaces,
+              $name,
+              $key,
+              $environment,
           );
         '''
           .trim();
@@ -182,7 +205,7 @@ class CodeGeneratorBuilder implements Builder {
   Future<void> _writeGeneratedFile(BuildStep buildStep, String content) async {
     final formattedContent = _formatCode(content);
     await buildStep.writeAsString(
-      AssetId(buildStep.inputId.package, 'lib/service_locator.g.dart'),
+      AssetId(buildStep.inputId.package, 'lib/dependency_registration.g.dart'),
       formattedContent,
     );
   }

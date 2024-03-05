@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field
+
 import 'package:example/test_files/service_a.dart';
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 
@@ -5,13 +7,13 @@ import 'abstract_service.dart';
 
 @RegisterFactory()
 class ServiceD implements AbstractService {
-  final ServiceA serviceA;
-  final double anyDouble;
+  final ServiceA _serviceA;
+  final double _anyDouble;
 
   ServiceD(
-    this.serviceA, {
-    this.anyDouble = 0.0,
-  });
+    this._serviceA, {
+    required double anyDouble,
+  }) : _anyDouble = anyDouble;
 
   @override
   void doSomething() {
@@ -21,7 +23,7 @@ class ServiceD implements AbstractService {
   @RegisterFactoryMethod()
   static ServiceD create(
     ServiceA serviceA, {
-    double anyDouble = 0.0,
+    required double anyDouble,
   }) {
     return ServiceD(
       serviceA,

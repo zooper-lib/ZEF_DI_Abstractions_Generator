@@ -7,6 +7,7 @@ import 'service_b.dart';
 
 @RegisterFactory(name: 'blafoo', environment: 'test')
 class ServiceC implements AbstractService {
+  // ignore: unused_field
   final ServiceA serviceA;
   final ServiceB serviceB;
   final ServiceD serviceD;

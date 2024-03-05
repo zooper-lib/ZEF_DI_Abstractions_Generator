@@ -1,7 +1,7 @@
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 import 'package:zef_di_inglue/zef_di_inglue.dart';
 
-import 'service_locator.g.dart';
+import 'dependency_registration.g.dart';
 import 'test_files/abstract_service.dart';
 import 'test_files/service_a.dart';
 import 'test_files/service_b.dart';
@@ -11,7 +11,7 @@ import 'test_files/service_d.dart';
 void main(List<String> arguments) {
   ServiceLocatorBuilder().withAdapter(InglueServiceLocatorAdapter()).build();
 
-  registerGeneratedDependencies();
+  registerDependencies();
 
   final serviceA = ServiceLocator.instance.resolve<ServiceA>();
   serviceA.doSomething();
@@ -30,7 +30,11 @@ void main(List<String> arguments) {
   });
   serviceD.doSomething();
 
-  final allServices = ServiceLocator.instance.resolveAll<AbstractService>();
+  final allServices =
+      ServiceLocator.instance.resolveAll<AbstractService>(namedArgs: {
+    'anyDouble': 10.0,
+    'someValue': 5.0,
+  });
   for (var service in allServices) {
     print('Got service: $service');
   }
