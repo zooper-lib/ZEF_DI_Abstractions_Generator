@@ -13,10 +13,10 @@ void registerGeneratedDependencies() {
       ServiceB(ServiceLocator.I.resolve<ServiceA>()));
   ServiceLocator.I.registerFactory<ServiceC>((serviceLocator, namedArgs) =>
       ServiceC(
-          serviceLocator.resolve<ServiceA>(),
-          serviceLocator.resolve<ServiceB>(),
-          serviceLocator.resolve<ServiceD>()));
+          serviceLocator.resolve<ServiceA>(namedArgs: namedArgs),
+          serviceLocator.resolve<ServiceB>(namedArgs: namedArgs),
+          serviceLocator.resolve<ServiceD>(namedArgs: namedArgs)));
   ServiceLocator.I.registerFactory<ServiceD>((serviceLocator, namedArgs) =>
-      ServiceD.create(serviceLocator.resolve<ServiceA>(),
-          someValue: namedArgs['someValue'] as double));
+      ServiceD.create(serviceLocator.resolve<ServiceA>(namedArgs: namedArgs),
+          anyDouble: namedArgs['anyDouble'] as double));
 }

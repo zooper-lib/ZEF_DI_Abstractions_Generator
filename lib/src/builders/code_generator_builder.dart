@@ -115,7 +115,7 @@ class CodeGeneratorBuilder implements Builder {
   String _generateFactoryRegistration(FactoryData factory) {
     // Initialize the dependencies resolution string for unnamed parameters
     String dependencies = factory.dependencies
-        .map((dep) => "serviceLocator.resolve<$dep>()")
+        .map((dep) => "serviceLocator.resolve<$dep>(namedArgs: namedArgs)")
         .join(', ');
 
     // Prepare the string for named arguments, if any

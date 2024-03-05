@@ -13,8 +13,7 @@ dependencies:
   glob:
   dart_style:
 
-  zef_di_abstractions:
-    path: ../ZEF_DI_Abstractions
+  zef_di_abstractions: ^1.1.1
 
 dev_dependencies:
   lints: ^3.0.0

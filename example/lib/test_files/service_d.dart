@@ -4,11 +4,11 @@ import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 @RegisterFactory()
 class ServiceD {
   final ServiceA serviceA;
-  final double someValue;
+  final double anyDouble;
 
   ServiceD(
     this.serviceA, {
-    this.someValue = 0.0,
+    this.anyDouble = 0.0,
   });
 
   void doSomething() {
@@ -20,11 +20,11 @@ class ServiceD {
   @RegisterFactoryMethod()
   static ServiceD create(
     ServiceA serviceA, {
-    double someValue = 0.0,
+    double anyDouble = 0.0,
   }) {
     return ServiceD(
       serviceA,
-      someValue: someValue,
+      anyDouble: anyDouble,
     );
   }
 }
