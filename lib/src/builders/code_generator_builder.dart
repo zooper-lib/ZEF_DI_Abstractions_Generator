@@ -29,7 +29,7 @@ class CodeGeneratorBuilder implements Builder {
 
   Future<Set<String>> _collectImportPaths(BuildStep buildStep) async {
     final importPaths = {
-      'package:zef_di_abstractions/zef_di_abstractions.dart'
+      'package:zef_di_abstractions/zef_di_abstractions.dart',
     };
 
     await for (final inputId in buildStep.findAssets(Glob('**/*.info.json'))) {
@@ -37,10 +37,19 @@ class CodeGeneratorBuilder implements Builder {
       final jsonData = json.decode(content) as List<dynamic>;
 
       for (var jsonItem in jsonData) {
-        final info = RegistrationData.fromJson(Map<String, dynamic>.from(
-            jsonItem)); // Use RegistrationData for deserialization
+        final info =
+            RegistrationData.fromJson(Map<String, dynamic>.from(jsonItem));
+
+        // Add the import path of the RegistrationData itself, if it's a package
         if (Uri.parse(info.importPath).scheme == 'package') {
           importPaths.add(info.importPath);
+        }
+
+        // Add import paths from all SuperTypeData instances in the interfaces list
+        for (final interface in info.interfaces) {
+          if (Uri.parse(interface.importPath).scheme == 'package') {
+            importPaths.add(interface.importPath);
+          }
         }
       }
     }
@@ -72,8 +81,6 @@ class CodeGeneratorBuilder implements Builder {
     return SortHelper.topologicallySortRegistrations(registrations);
   }
 
-  // Implement _topologicallySortRegistrations based on your dependency analysis and sorting strategy
-
   void _writeHeader(StringBuffer buffer) {
     buffer
       ..writeln("// GENERATED CODE - DO NOT MODIFY BY HAND")
@@ -94,10 +101,8 @@ class CodeGeneratorBuilder implements Builder {
 
     for (var registration in registrations) {
       if (registration is InstanceData) {
-        print('Generating instance registration for ${registration.className}');
         buffer.writeln(_generateInstanceRegistration(registration));
       } else if (registration is FactoryData) {
-        print('Generating factory registration for ${registration.className}');
         buffer.writeln(_generateFactoryRegistration(registration));
       }
     }
@@ -109,10 +114,37 @@ class CodeGeneratorBuilder implements Builder {
     final dependencies = instance.dependencies
         .map((d) => "ServiceLocator.I.resolve<$d>()")
         .join(', ');
-    return "ServiceLocator.I.registerInstance<${instance.className}>(${instance.className}(${dependencies.isNotEmpty ? dependencies : ''}));";
+
+    final interfaces = instance.interfaces.isNotEmpty
+        ? "interfaces: [${instance.interfaces.map((i) => i.className).join(', ')}]"
+        : "interfaces: null";
+
+    final name =
+        instance.name != null ? "name: '${instance.name}'" : 'name: null';
+
+    final key = instance.key != null ? "key: ${instance.key}" : 'key: null';
+
+    final environment = instance.environment != null
+        ? "environment: '${instance.environment}'"
+        : 'environment: null';
+
+    return "ServiceLocator.I.registerInstance<${instance.className}>(${instance.className}(${dependencies.isNotEmpty ? dependencies : ''}), $interfaces, $name, $key, $environment,);";
   }
 
   String _generateFactoryRegistration(FactoryData factory) {
+    final interfaces = factory.interfaces.isNotEmpty
+        ? "interfaces: [${factory.interfaces.map((i) => i.className).join(', ')}]"
+        : "interfaces: null";
+
+    final name =
+        factory.name != null ? "name: '${factory.name}'" : 'name: null';
+
+    final key = factory.key != null ? "key: ${factory.key}" : 'key: null';
+
+    final environment = factory.environment != null
+        ? "environment: '${factory.environment}'"
+        : 'environment: null';
+
     // Initialize the dependencies resolution string for unnamed parameters
     String dependencies = factory.dependencies
         .map((dep) => "serviceLocator.resolve<$dep>(namedArgs: namedArgs)")
@@ -132,7 +164,7 @@ class CodeGeneratorBuilder implements Builder {
       // If a factory method is specified, use it in the registration code
       return '''
           ServiceLocator.I.registerFactory<${factory.className}>(
-            (serviceLocator, namedArgs) => ${factory.className}.${factory.factoryMethod}($allArgs)
+            (serviceLocator, namedArgs) => ${factory.className}.${factory.factoryMethod}($allArgs), $interfaces, $name, $key, $environment,
           );
         '''
           .trim();
@@ -140,7 +172,7 @@ class CodeGeneratorBuilder implements Builder {
       // If no factory method is specified, use the constructor with resolved dependencies and named arguments
       return '''
           ServiceLocator.I.registerFactory<${factory.className}>(
-            (serviceLocator, namedArgs) => ${factory.className}($allArgs)
+            (serviceLocator, namedArgs) => ${factory.className}($allArgs), $interfaces, $name, $key, $environment,
           );
         '''
           .trim();

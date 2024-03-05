@@ -1,8 +1,10 @@
 import 'package:example/test_files/service_a.dart';
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 
+import 'abstract_service.dart';
+
 @RegisterFactory()
-class ServiceD {
+class ServiceD implements AbstractService {
   final ServiceA serviceA;
   final double anyDouble;
 
@@ -11,10 +13,9 @@ class ServiceD {
     this.anyDouble = 0.0,
   });
 
+  @override
   void doSomething() {
-    serviceA.doSomething();
-
-    print('ServiceD: doing something');
+    print('ServiceD.doSomething');
   }
 
   @RegisterFactoryMethod()

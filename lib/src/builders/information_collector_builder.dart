@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
 import 'package:source_gen/source_gen.dart';
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';
@@ -39,10 +40,8 @@ class InformationCollectorBuilder implements Builder {
 
         if (isRegisterInstance) {
           collectedRegistrations.add(_collectInstanceData(element));
-          print('Collected instance data for ${element.name}');
         } else if (isRegisterFactory) {
           collectedRegistrations.add(_collectFactoryData(element));
-          print('Collected factory data for ${element.name}');
         }
       }
     }
@@ -62,20 +61,27 @@ class InformationCollectorBuilder implements Builder {
   }
 
   InstanceData _collectInstanceData(ClassElement element) {
-    List<String> constructorParams = _getConstructorParams(element);
+    final Set<SuperTypeData> superClasses = _exploreClassHierarchy(element, {});
+    final List<String> constructorParams = _getConstructorParams(element);
+    final _AnnotationAttributes attributes = _getAnnotationAttributes(element);
+
     return InstanceData(
       importPath: element.librarySource.uri.toString(),
       className: element.name,
       dependencies: constructorParams,
-      interfaces: [], // Collect interfaces if needed
+      interfaces: superClasses.toList(),
+      name: attributes.name,
+      key: attributes.key,
+      environment: attributes.environment,
     );
   }
 
   FactoryData _collectFactoryData(ClassElement element) {
-    // Collect unnamed constructor parameters
+    final Set<SuperTypeData> superClasses = _exploreClassHierarchy(element, {});
     List<String> constructorParams = _getConstructorParams(element);
     String? factoryMethodName = _findAnnotatedFactoryMethodName(element);
     Map<String, String> namedArgs = {};
+    final _AnnotationAttributes attributes = _getAnnotationAttributes(element);
 
     if (factoryMethodName != null) {
       // Factory method is present, collect named arguments from it
@@ -89,13 +95,15 @@ class InformationCollectorBuilder implements Builder {
     }
 
     return FactoryData(
+      interfaces: superClasses.toList(),
       importPath: element.librarySource.uri.toString(),
       className: element.name,
-      dependencies:
-          constructorParams, // Unnamed parameters from the constructor
+      dependencies: constructorParams,
       factoryMethod: factoryMethodName,
-      namedArgs:
-          namedArgs, // Named arguments from either factory method or constructor
+      namedArgs: namedArgs,
+      name: attributes.name,
+      key: attributes.key,
+      environment: attributes.environment,
     );
   }
 
@@ -140,6 +148,28 @@ class InformationCollectorBuilder implements Builder {
             param.name, param.type.getDisplayString(withNullability: false))));
   }
 
+  _AnnotationAttributes _getAnnotationAttributes(ClassElement element) {
+    for (var annotation in element.metadata) {
+      var annotationReader = ConstantReader(annotation.computeConstantValue());
+      if (_isRegisterInstanceAnnotation(annotationReader) ||
+          _isRegisterFactoryAnnotation(annotationReader)) {
+        final String? name = annotationReader.read('_name').isNull
+            ? null
+            : annotationReader.read('_name').stringValue;
+        final dynamic key = annotationReader.read('_key').isNull
+            ? null
+            : annotationReader.read('_key').literalValue;
+        final String? environment = annotationReader.read('_environment').isNull
+            ? null
+            : annotationReader.read('_environment').stringValue;
+
+        return _AnnotationAttributes(
+            name: name, key: key, environment: environment);
+      }
+    }
+    return _AnnotationAttributes();
+  }
+
   Future<void> _writeCollectedData(
       BuildStep buildStep, List<RegistrationData> registrations) async {
     if (registrations.isNotEmpty) {
@@ -151,4 +181,48 @@ class InformationCollectorBuilder implements Builder {
       );
     }
   }
+
+  Set<SuperTypeData> _exploreClassHierarchy(
+      ClassElement classElement, Set<SuperTypeData> visitedClasses) {
+    // Avoid processing the same class more than once
+    if (visitedClasses.any((element) =>
+        element.className == classElement.name &&
+        element.importPath == classElement.librarySource.uri.toString())) {
+      return visitedClasses;
+    }
+
+    visitedClasses.add(
+      SuperTypeData(
+        importPath: classElement.librarySource.uri.toString(),
+        className: classElement.name,
+      ),
+    );
+
+    // Explore the superclass
+    InterfaceType? supertype = classElement.supertype;
+    if (supertype != null) {
+      Element? superclassElement = supertype.element;
+      if (superclassElement is ClassElement) {
+        _exploreClassHierarchy(superclassElement, visitedClasses);
+      }
+    }
+
+    // Explore the implemented interfaces
+    for (InterfaceType interfaceType in classElement.interfaces) {
+      Element interfaceElement = interfaceType.element;
+      if (interfaceElement is ClassElement) {
+        _exploreClassHierarchy(interfaceElement, visitedClasses);
+      }
+    }
+
+    return visitedClasses;
+  }
+}
+
+class _AnnotationAttributes {
+  final String? name;
+  final dynamic key;
+  final String? environment;
+
+  _AnnotationAttributes({this.name, this.key, this.environment});
 }

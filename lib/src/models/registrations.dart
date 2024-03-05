@@ -1,7 +1,7 @@
 abstract class RegistrationData {
   final String importPath;
   final String className;
-  final List<String> interfaces;
+  final List<SuperTypeData> interfaces;
   final String? name;
   final dynamic key;
   final String? environment;
@@ -37,6 +37,30 @@ abstract class RegistrationData {
   }
 }
 
+class SuperTypeData {
+  final String importPath;
+  final String className;
+
+  SuperTypeData({
+    required this.importPath,
+    required this.className,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'importPath': importPath,
+      'className': className,
+    };
+  }
+
+  factory SuperTypeData.fromJson(Map<String, dynamic> json) {
+    return SuperTypeData(
+      importPath: json['importPath'],
+      className: json['className'],
+    );
+  }
+}
+
 class InstanceData extends RegistrationData {
   final List<String> dependencies;
 
@@ -58,11 +82,16 @@ class InstanceData extends RegistrationData {
   }
 
   factory InstanceData.fromJson(Map<String, dynamic> json) {
+    List<SuperTypeData> interfaces =
+        (json['interfaces'] as List<dynamic>? ?? [])
+            .map((e) => SuperTypeData.fromJson(e as Map<String, dynamic>))
+            .toList();
+
     return InstanceData(
       importPath: json['importPath'],
       className: json['className'],
       dependencies: List<String>.from(json['dependencies']),
-      interfaces: List<String>.from(json['interfaces'] ?? []),
+      interfaces: interfaces,
       name: json['name'],
       key: json['key'],
       environment: json['environment'],
@@ -99,13 +128,18 @@ class FactoryData extends RegistrationData {
   }
 
   factory FactoryData.fromJson(Map<String, dynamic> json) {
+    List<SuperTypeData> interfaces =
+        (json['interfaces'] as List<dynamic>? ?? [])
+            .map((e) => SuperTypeData.fromJson(e as Map<String, dynamic>))
+            .toList();
+
     return FactoryData(
       importPath: json['importPath'],
       className: json['className'],
       dependencies: List<String>.from(json['dependencies'] ?? []),
       factoryMethod: json['factoryMethod'],
       namedArgs: Map<String, String>.from(json['namedArgs'] ?? {}),
-      interfaces: List<String>.from(json['interfaces'] ?? []),
+      interfaces: interfaces,
       name: json['name'],
       key: json['key'],
       environment: json['environment'],
