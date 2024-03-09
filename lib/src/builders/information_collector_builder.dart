@@ -26,6 +26,7 @@ class InformationCollectorBuilder implements Builder {
       if (element is ClassElement) {
         bool isRegisterInstance = false;
         bool isRegisterFactory = false;
+        bool isRegisterLazy = false;
 
         for (var annotation in element.metadata) {
           var annotationReader =
@@ -35,6 +36,8 @@ class InformationCollectorBuilder implements Builder {
             break;
           } else if (_isRegisterFactoryAnnotation(annotationReader)) {
             isRegisterFactory = true;
+          } else if (_isRegisterLazyAnnotation(annotationReader)) {
+            isRegisterLazy = true;
           }
         }
 
@@ -42,6 +45,8 @@ class InformationCollectorBuilder implements Builder {
           collectedRegistrations.add(_collectInstanceData(element));
         } else if (isRegisterFactory) {
           collectedRegistrations.add(_collectFactoryData(element));
+        } else if (isRegisterLazy) {
+          collectedRegistrations.add(_collectLazyData(element));
         }
       }
     }
@@ -57,6 +62,11 @@ class InformationCollectorBuilder implements Builder {
 
   bool _isRegisterFactoryAnnotation(ConstantReader annotation) {
     return TypeChecker.fromRuntime(RegisterFactory)
+        .isExactlyType(annotation.objectValue.type!);
+  }
+
+  bool _isRegisterLazyAnnotation(ConstantReader annotation) {
+    return TypeChecker.fromRuntime(RegisterLazy)
         .isExactlyType(annotation.objectValue.type!);
   }
 
@@ -101,6 +111,25 @@ class InformationCollectorBuilder implements Builder {
       dependencies: constructorParams,
       factoryMethod: factoryMethodName,
       namedArgs: namedArgs,
+      name: attributes.name,
+      key: attributes.key,
+      environment: attributes.environment,
+    );
+  }
+
+  LazyData _collectLazyData(ClassElement element) {
+    final Set<SuperTypeData> superClasses = _exploreClassHierarchy(element, {});
+    final _AnnotationAttributes attributes = _getAnnotationAttributes(element);
+    final List<String> constructorParams = _getConstructorParams(element);
+
+    final returnType = element.name;
+
+    return LazyData(
+      importPath: element.librarySource.uri.toString(),
+      className: element.name,
+      returnType: returnType,
+      dependencies: constructorParams,
+      interfaces: superClasses.toList(),
       name: attributes.name,
       key: attributes.key,
       environment: attributes.environment,
@@ -175,9 +204,12 @@ class InformationCollectorBuilder implements Builder {
     if (registrations.isNotEmpty) {
       final jsonList =
           registrations.map((registration) => registration.toJson()).toList();
+
+      final jsonString = json.encode(jsonList);
+
       await buildStep.writeAsString(
         buildStep.inputId.changeExtension('.info.json'),
-        json.encode(jsonList),
+        jsonString,
       );
     }
   }

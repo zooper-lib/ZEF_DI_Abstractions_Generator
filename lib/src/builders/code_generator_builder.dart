@@ -30,6 +30,7 @@ class CodeGeneratorBuilder implements Builder {
   Future<Set<String>> _collectImportPaths(BuildStep buildStep) async {
     final importPaths = {
       'package:zef_di_abstractions/zef_di_abstractions.dart',
+      'package:zef_helpers_lazy/zef_helpers_lazy.dart'
     };
 
     await for (final inputId in buildStep.findAssets(Glob('**/*.info.json'))) {
@@ -68,16 +69,13 @@ class CodeGeneratorBuilder implements Builder {
       for (var jsonItem in jsonData) {
         final data = Map<String, dynamic>.from(jsonItem);
 
-        if (data.containsKey('factoryMethod')) {
-          registrations.add(FactoryData.fromJson(data));
-        } else {
-          registrations.add(InstanceData.fromJson(data));
-        }
+        final registration = RegistrationData.fromJson(data);
+
+        registrations.add(registration);
       }
     }
 
-    // Sort the registrations if necessary, mainly based on dependencies for InstanceData
-    // Assuming a method _topologicallySortRegistrations exists that can handle sorting
+    // Sort the registrations
     return SortHelper.topologicallySortRegistrations(registrations);
   }
 
@@ -107,6 +105,8 @@ class CodeGeneratorBuilder implements Builder {
         buffer.writeln(_generateInstanceRegistration(registration));
       } else if (registration is FactoryData) {
         buffer.writeln(_generateFactoryRegistration(registration));
+      } else if (registration is LazyData) {
+        buffer.writeln(_generateLazyRegistration(registration));
       }
 
       // Add a newline after each registration
@@ -118,8 +118,8 @@ class CodeGeneratorBuilder implements Builder {
 
   String _generateInstanceRegistration(InstanceData instance) {
     final dependencies = instance.dependencies
-        .map((d) => "ServiceLocator.I.resolve<$d>()")
-        .join(', ');
+        .map((d) => "ServiceLocator.I.resolve<$d>(),")
+        .join();
 
     final interfaces = instance.interfaces.isNotEmpty
         ? "interfaces: [${instance.interfaces.map((i) => i.className).join(', ')}]"
@@ -165,8 +165,8 @@ class CodeGeneratorBuilder implements Builder {
 
     // Prepare the string for named arguments, if any
     String namedArgs = factory.namedArgs.entries
-        .map((e) => "${e.key}: namedArgs['${e.key}'] as ${e.value}")
-        .join(', ');
+        .map((e) => "${e.key}: namedArgs['${e.key}'] as ${e.value},")
+        .join();
 
     // Combine dependencies and named arguments, if needed
     String allArgs =
@@ -200,6 +200,33 @@ class CodeGeneratorBuilder implements Builder {
         '''
           .trim();
     }
+  }
+
+  String _generateLazyRegistration(LazyData lazyData) {
+    // Resolve dependencies for the constructor parameters
+    final dependencies = lazyData.dependencies
+        .map((d) => "ServiceLocator.I.resolve<$d>(), ")
+        .join();
+
+    final interfaces = lazyData.interfaces.isNotEmpty
+        ? "interfaces: [${lazyData.interfaces.map((i) => i.className).join(', ')}]"
+        : "interfaces: null";
+
+    final name =
+        lazyData.name != null ? "name: '${lazyData.name}'" : 'name: null';
+    final key = lazyData.key != null ? "key: ${lazyData.key}" : 'key: null';
+    final environment = lazyData.environment != null
+        ? "environment: '${lazyData.environment}'"
+        : 'environment: null';
+
+    return '''
+        ServiceLocator.I.registerLazy<${lazyData.className}>(
+          Lazy<${lazyData.className}>(factory: () => ${lazyData.className}(${dependencies.isNotEmpty ? dependencies : ''}),),
+          $interfaces,
+          $name,
+          $key,
+          $environment,
+        );''';
   }
 
   Future<void> _writeGeneratedFile(BuildStep buildStep, String content) async {

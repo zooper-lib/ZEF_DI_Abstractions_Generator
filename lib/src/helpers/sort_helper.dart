@@ -33,7 +33,7 @@ class SortHelper {
 
     // Add FactoryData objects at the end, assuming they don't have dependencies affecting the order
     for (var registration in registrations) {
-      if (registration is FactoryData &&
+      if ((registration is FactoryData || registration is LazyData) &&
           !sortedClassNames.contains(registration.className)) {
         sortedRegistrations.add(registration);
       }
