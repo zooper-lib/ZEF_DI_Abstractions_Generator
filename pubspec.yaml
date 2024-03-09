@@ -22,7 +22,7 @@ dependencies:
   glob: ^2.1.2
   dart_style: ^2.3.6
 
-  zef_di_abstractions: 1.2.0
+  zef_di_abstractions: ^1.2.0
 
   zef_helpers_lazy: ^1.0.0
 
