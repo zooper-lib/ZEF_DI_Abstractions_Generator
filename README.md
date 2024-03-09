@@ -150,6 +150,55 @@ We don't like this approach, but we will create a better solution for this in fu
 
 ---
 
+### Lazy Registration
+
+Lazy registration allows you to defer the instantiation of a service until it's actually needed. This can improve the startup time of your application by loading services on-demand. To register a service as lazy, use the `@RegisterLazy()` annotation:
+
+```dart
+import 'package:zef_di_abstractions/zef_di_abstractions.dart';
+
+@RegisterLazy()
+class LazyService {
+  void doSomething() {
+    print("Doing something lazily...");
+  }
+}
+```
+
+After running the generator, `LazyService` will be registered for lazy instantiation in the generated `dependency_registration.g.dart` file:
+
+```dart
+void registerDependencies() {
+  ServiceLocator.I.registerLazy<LazyService>(
+    Lazy<LazyService>(factory: () => LazyService()),
+    interfaces: null,
+    name: null,
+    key: null,
+    environment: null,
+  );
+}
+```
+
+When you resolve `LazyService` from the `ServiceLocator`, it will only be instantiated at that moment, not before:
+
+```dart
+void main(List<String> arguments) {
+  // Create an instance of the ServiceLocator
+  ServiceLocatorBuilder()...build();
+
+  // Call the function to register the generated dependencies
+  registerDependencies();
+
+  // LazyService is not instantiated yet
+  final lazyService = ServiceLocator.I.resolve<LazyService>(); // Instantiates LazyService now
+  lazyService.doSomething();
+
+  ... other code
+}
+```
+
+This lazy registration feature is especially useful for services that are resource-intensive to create or are used infrequently, allowing your application to start faster and consume less memory during initialization.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues, pull requests, or suggestions to improve the tool.

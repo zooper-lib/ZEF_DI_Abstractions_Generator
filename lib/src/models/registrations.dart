@@ -27,14 +27,16 @@ abstract class RegistrationData {
   }
 
   factory RegistrationData.fromJson(Map<String, dynamic> json) {
-    if (json.containsKey('dependencies')) {
-      return InstanceData.fromJson(json);
-    } else if (json.containsKey('factoryMethod')) {
+    if (json.containsKey('factoryMethod')) {
       return FactoryData.fromJson(json);
+    } else if (json.containsKey('returnType')) {
+      return LazyData.fromJson(json);
     } else {
-      throw Exception('Unknown RegistrationData type');
+      return InstanceData.fromJson(json);
     }
   }
+
+  bool isInstance() => this is InstanceData;
 }
 
 class SuperTypeData {
@@ -139,6 +141,50 @@ class FactoryData extends RegistrationData {
       dependencies: List<String>.from(json['dependencies'] ?? []),
       factoryMethod: json['factoryMethod'],
       namedArgs: Map<String, String>.from(json['namedArgs'] ?? {}),
+      interfaces: interfaces,
+      name: json['name'],
+      key: json['key'],
+      environment: json['environment'],
+    );
+  }
+}
+
+class LazyData extends RegistrationData {
+  final List<String> dependencies;
+  final String returnType;
+
+  LazyData({
+    required super.importPath,
+    required super.className,
+    required this.returnType,
+    this.dependencies = const [],
+    super.interfaces,
+    super.name,
+    super.key,
+    super.environment,
+  });
+
+  @override
+  Map<String, dynamic> toJson() {
+    final json = super.toJson();
+    json.addAll({
+      'dependencies': dependencies,
+      'returnType': returnType,
+    });
+    return json;
+  }
+
+  factory LazyData.fromJson(Map<String, dynamic> json) {
+    List<SuperTypeData> interfaces =
+        (json['interfaces'] as List<dynamic>? ?? [])
+            .map((e) => SuperTypeData.fromJson(e as Map<String, dynamic>))
+            .toList();
+
+    return LazyData(
+      importPath: json['importPath'],
+      className: json['className'],
+      returnType: json['returnType'] as String,
+      dependencies: List<String>.from(json['dependencies']),
       interfaces: interfaces,
       name: json['name'],
       key: json['key'],

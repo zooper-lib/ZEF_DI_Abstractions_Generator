@@ -2,7 +2,7 @@ import 'package:example/test_files/abstract_service.dart';
 import 'package:example/test_files/service_a.dart';
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 
-@RegisterInstance()
+@RegisterLazy()
 class ServiceB implements AbstractService {
   final ServiceA serviceA;
 

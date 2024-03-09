@@ -2,6 +2,7 @@
 // ******************************************************************************
 
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';
+import 'package:zef_helpers_lazy/zef_helpers_lazy.dart';
 import 'package:example/test_files/service_a.dart';
 import 'package:example/test_files/abstract_service.dart';
 import 'package:example/test_files/service_b.dart';
@@ -17,8 +18,12 @@ void registerDependencies() {
     environment: null,
   );
 
-  ServiceLocator.I.registerInstance<ServiceB>(
-    ServiceB(ServiceLocator.I.resolve<ServiceA>()),
+  ServiceLocator.I.registerLazy<ServiceB>(
+    Lazy<ServiceB>(
+      factory: () => ServiceB(
+        ServiceLocator.I.resolve<ServiceA>(),
+      ),
+    ),
     interfaces: [ServiceB, Object, AbstractService],
     name: null,
     key: null,
@@ -38,8 +43,9 @@ void registerDependencies() {
 
   ServiceLocator.I.registerFactory<ServiceD>(
     (serviceLocator, namedArgs) => ServiceD.create(
-        serviceLocator.resolve<ServiceA>(namedArgs: namedArgs),
-        anyDouble: namedArgs['anyDouble'] as double),
+      serviceLocator.resolve<ServiceA>(namedArgs: namedArgs),
+      anyDouble: namedArgs['anyDouble'] as double,
+    ),
     interfaces: [ServiceD, Object, AbstractService],
     name: null,
     key: null,
