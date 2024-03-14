@@ -21,7 +21,7 @@ void registerDependencies() {
   ServiceLocator.I.registerLazy<ServiceB>(
     Lazy<ServiceB>(
       factory: () => ServiceB(
-        ServiceLocator.I.resolve<ServiceA>(),
+        ServiceLocator.I.resolve(),
       ),
     ),
     interfaces: {AbstractService, ServiceB},
@@ -32,9 +32,9 @@ void registerDependencies() {
 
   ServiceLocator.I.registerFactory<ServiceC>(
     (serviceLocator, namedArgs) => ServiceC(
-        serviceLocator.resolve<ServiceA>(namedArgs: namedArgs),
-        serviceLocator.resolve<ServiceB>(namedArgs: namedArgs),
-        serviceLocator.resolve<ServiceD>(namedArgs: namedArgs)),
+        serviceLocator.resolve(namedArgs: namedArgs),
+        serviceLocator.resolve(namedArgs: namedArgs),
+        serviceLocator.resolve(namedArgs: namedArgs)),
     interfaces: {AbstractService, ServiceC},
     name: 'blafoo',
     key: null,
@@ -43,7 +43,7 @@ void registerDependencies() {
 
   ServiceLocator.I.registerFactory<ServiceD>(
     (serviceLocator, namedArgs) => ServiceD.create(
-      serviceLocator.resolve<ServiceA>(namedArgs: namedArgs),
+      serviceLocator.resolve(namedArgs: namedArgs),
       anyDouble: namedArgs['anyDouble'] as double,
     ),
     interfaces: {AbstractService, ServiceD},
