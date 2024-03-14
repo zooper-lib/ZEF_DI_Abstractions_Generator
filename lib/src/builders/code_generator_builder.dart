@@ -118,9 +118,8 @@ class CodeGeneratorBuilder implements Builder {
   }
 
   String _generateInstanceRegistration(InstanceData instance) {
-    final dependencies = instance.dependencies
-        .map((d) => "ServiceLocator.I.resolve<$d>(),")
-        .join();
+    final dependencies =
+        instance.dependencies.map((d) => "ServiceLocator.I.resolve(),").join();
 
     final interfaces = instance.interfaces.isNotEmpty
         ? "interfaces: {${instance.interfaces.map((i) => i.className).join(', ')}}"
@@ -161,7 +160,7 @@ class CodeGeneratorBuilder implements Builder {
 
     // Initialize the dependencies resolution string for unnamed parameters
     String dependencies = factory.dependencies
-        .map((dep) => "serviceLocator.resolve<$dep>(namedArgs: namedArgs)")
+        .map((dep) => "serviceLocator.resolve(namedArgs: namedArgs)")
         .join(', ');
 
     // Prepare the string for named arguments, if any
@@ -205,9 +204,8 @@ class CodeGeneratorBuilder implements Builder {
 
   String _generateLazyRegistration(LazyData lazyData) {
     // Resolve dependencies for the constructor parameters
-    final dependencies = lazyData.dependencies
-        .map((d) => "ServiceLocator.I.resolve<$d>(), ")
-        .join();
+    final dependencies =
+        lazyData.dependencies.map((d) => "ServiceLocator.I.resolve(), ").join();
 
     final interfaces = lazyData.interfaces.isNotEmpty
         ? "interfaces: {${lazyData.interfaces.map((i) => i.className).join(', ')}}"

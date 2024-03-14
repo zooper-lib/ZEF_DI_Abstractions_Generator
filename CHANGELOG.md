@@ -1,3 +1,7 @@
+## 1.1.2
+
+- Removed type definition in generated code
+
 ## 1.1.1
 
 - Extended code to correctly import types
