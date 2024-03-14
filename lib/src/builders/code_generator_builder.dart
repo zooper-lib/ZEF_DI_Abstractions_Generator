@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'package:glob/glob.dart';
 import 'package:zef_di_abstractions_generator/src/helpers/sort_helper.dart';
 
+import '../models/import_path.dart';
+import '../models/import_type.dart';
 import '../models/registrations.dart';
 
 class CodeGeneratorBuilder implements Builder {
@@ -14,48 +16,27 @@ class CodeGeneratorBuilder implements Builder {
         r'$lib$': ['dependency_registration.g.dart']
       };
 
+  final Set<ImportPath> _importedPackages = {
+    ImportPath(
+      'zef_di_abstractions/zef_di_abstractions.dart',
+      ImportType.package,
+    ),
+    ImportPath(
+      'zef_helpers_lazy/zef_helpers_lazy.dart',
+      ImportType.package,
+    ),
+  };
+
   @override
   Future<void> build(BuildStep buildStep) async {
     final codeBuffer = StringBuffer();
-    final importPaths = await _collectImportPaths(buildStep);
     final allRegistrations = await _readAndSortRegistrationData(buildStep);
 
     _writeHeader(codeBuffer);
-    _writeImports(codeBuffer, importPaths);
+    _writeImports(codeBuffer, allRegistrations);
     _writeRegistrationFunctions(codeBuffer, allRegistrations);
 
     await _writeGeneratedFile(buildStep, codeBuffer.toString());
-  }
-
-  Future<Set<String>> _collectImportPaths(BuildStep buildStep) async {
-    final importPaths = {
-      'package:zef_di_abstractions/zef_di_abstractions.dart',
-      'package:zef_helpers_lazy/zef_helpers_lazy.dart'
-    };
-
-    await for (final inputId in buildStep.findAssets(Glob('**/*.info.json'))) {
-      final content = await buildStep.readAsString(inputId);
-      final jsonData = json.decode(content) as List<dynamic>;
-
-      for (var jsonItem in jsonData) {
-        final info =
-            RegistrationData.fromJson(Map<String, dynamic>.from(jsonItem));
-
-        // Add the import path of the RegistrationData itself, if it's a package
-        if (Uri.parse(info.importPath).scheme == 'package') {
-          importPaths.add(info.importPath);
-        }
-
-        // Add import paths from all SuperTypeData instances in the interfaces list
-        for (final interface in info.interfaces) {
-          if (Uri.parse(interface.importPath).scheme == 'package') {
-            importPaths.add(interface.importPath);
-          }
-        }
-      }
-    }
-
-    return importPaths;
   }
 
   Future<List<RegistrationData>> _readAndSortRegistrationData(
@@ -70,7 +51,6 @@ class CodeGeneratorBuilder implements Builder {
         final data = Map<String, dynamic>.from(jsonItem);
 
         final registration = RegistrationData.fromJson(data);
-
         registrations.add(registration);
       }
     }
@@ -86,10 +66,31 @@ class CodeGeneratorBuilder implements Builder {
           "// ******************************************************************************\n");
   }
 
-  void _writeImports(StringBuffer buffer, Set<String> importPaths) {
-    for (var path in importPaths) {
-      buffer.writeln("import '$path';");
+  void _writeImports(
+      StringBuffer buffer, List<RegistrationData> registrations) {
+    final Set<ImportPath> uniqueImports = {};
+
+    // Collect import paths from registrations
+    for (var registration in registrations) {
+      uniqueImports.add(registration.importPath);
+
+      // Collect import paths from super types/interfaces
+      for (var interface in registration.interfaces) {
+        uniqueImports.add(interface.importPath);
+      }
     }
+
+    // Optionally, add any default or fixed imports your system requires
+    for (var importPath in _importedPackages) {
+      uniqueImports.add(importPath);
+    }
+
+    // Write the import statements
+    for (var importPath in uniqueImports) {
+      buffer.writeln(importPath.toString());
+    }
+
+    // Add an extra newline for separation
     buffer.writeln();
   }
 
@@ -122,7 +123,7 @@ class CodeGeneratorBuilder implements Builder {
         .join();
 
     final interfaces = instance.interfaces.isNotEmpty
-        ? "interfaces: [${instance.interfaces.map((i) => i.className).join(', ')}]"
+        ? "interfaces: {${instance.interfaces.map((i) => i.className).join(', ')}}"
         : "interfaces: null";
 
     final name =
@@ -146,7 +147,7 @@ class CodeGeneratorBuilder implements Builder {
 
   String _generateFactoryRegistration(FactoryData factory) {
     final interfaces = factory.interfaces.isNotEmpty
-        ? "interfaces: [${factory.interfaces.map((i) => i.className).join(', ')}]"
+        ? "interfaces: {${factory.interfaces.map((i) => i.className).join(', ')}}"
         : "interfaces: null";
 
     final name =
@@ -209,7 +210,7 @@ class CodeGeneratorBuilder implements Builder {
         .join();
 
     final interfaces = lazyData.interfaces.isNotEmpty
-        ? "interfaces: [${lazyData.interfaces.map((i) => i.className).join(', ')}]"
+        ? "interfaces: {${lazyData.interfaces.map((i) => i.className).join(', ')}}"
         : "interfaces: null";
 
     final name =

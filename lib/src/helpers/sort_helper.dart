@@ -3,7 +3,6 @@ import '../models/registrations.dart';
 class SortHelper {
   static List<RegistrationData> topologicallySortRegistrations(
       List<RegistrationData> registrations) {
-    // Build the graph from InstanceData dependencies
     final Map<String, Set<String>> graph = {};
     final Map<String, RegistrationData> dataLookup = {};
 
@@ -25,8 +24,6 @@ class SortHelper {
       if (registrationData != null) {
         sortedRegistrations.add(registrationData);
       } else {
-        // Optionally, handle the missing data case, such as logging a warning
-        // This can help identify why a className was not found in dataLookup
         print("Warning: No registration data found for class '$className'");
       }
     }
@@ -54,7 +51,6 @@ class SortHelper {
       }
 
       visiting.add(node);
-      // Ensure there's a list for 'node' in the graph, even if it's empty
       final dependencies = graph[node];
       if (dependencies != null) {
         for (var dep in dependencies) {
