@@ -1,5 +1,7 @@
+import 'package:zef_di_abstractions_generator/src/models/import_path.dart';
+
 abstract class RegistrationData {
-  final String importPath;
+  final ImportPath importPath;
   final String className;
   final List<SuperTypeData> interfaces;
   final String? name;
@@ -17,7 +19,7 @@ abstract class RegistrationData {
 
   Map<String, dynamic> toJson() {
     return {
-      'importPath': importPath,
+      'importPath': importPath.toJson(),
       'className': className,
       'interfaces': interfaces,
       'name': name,
@@ -40,7 +42,7 @@ abstract class RegistrationData {
 }
 
 class SuperTypeData {
-  final String importPath;
+  final ImportPath importPath;
   final String className;
 
   SuperTypeData({
@@ -50,14 +52,14 @@ class SuperTypeData {
 
   Map<String, dynamic> toJson() {
     return {
-      'importPath': importPath,
+      'importPath': importPath.toJson(),
       'className': className,
     };
   }
 
   factory SuperTypeData.fromJson(Map<String, dynamic> json) {
     return SuperTypeData(
-      importPath: json['importPath'],
+      importPath: ImportPath.fromJson(json['importPath']),
       className: json['className'],
     );
   }
@@ -90,7 +92,7 @@ class InstanceData extends RegistrationData {
             .toList();
 
     return InstanceData(
-      importPath: json['importPath'],
+      importPath: ImportPath.fromJson(json['importPath']),
       className: json['className'],
       dependencies: List<String>.from(json['dependencies']),
       interfaces: interfaces,
@@ -136,7 +138,7 @@ class FactoryData extends RegistrationData {
             .toList();
 
     return FactoryData(
-      importPath: json['importPath'],
+      importPath: ImportPath.fromJson(json['importPath']),
       className: json['className'],
       dependencies: List<String>.from(json['dependencies'] ?? []),
       factoryMethod: json['factoryMethod'],
@@ -181,7 +183,7 @@ class LazyData extends RegistrationData {
             .toList();
 
     return LazyData(
-      importPath: json['importPath'],
+      importPath: ImportPath.fromJson(json['importPath']),
       className: json['className'],
       returnType: json['returnType'] as String,
       dependencies: List<String>.from(json['dependencies']),

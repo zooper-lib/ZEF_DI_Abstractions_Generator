@@ -1,18 +1,18 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ******************************************************************************
 
-import 'package:zef_di_abstractions/zef_di_abstractions.dart';
-import 'package:zef_helpers_lazy/zef_helpers_lazy.dart';
 import 'package:example/test_files/service_a.dart';
 import 'package:example/test_files/abstract_service.dart';
 import 'package:example/test_files/service_b.dart';
 import 'package:example/test_files/service_c.dart';
 import 'package:example/test_files/service_d.dart';
+import 'package:zef_di_abstractions/zef_di_abstractions.dart';
+import 'package:zef_helpers_lazy/zef_helpers_lazy.dart';
 
 void registerDependencies() {
   ServiceLocator.I.registerInstance<ServiceA>(
     ServiceA(),
-    interfaces: [ServiceA, Object, AbstractService],
+    interfaces: {AbstractService, ServiceA},
     name: 'foobla',
     key: null,
     environment: null,
@@ -24,7 +24,7 @@ void registerDependencies() {
         ServiceLocator.I.resolve<ServiceA>(),
       ),
     ),
-    interfaces: [ServiceB, Object, AbstractService],
+    interfaces: {AbstractService, ServiceB},
     name: null,
     key: null,
     environment: null,
@@ -35,7 +35,7 @@ void registerDependencies() {
         serviceLocator.resolve<ServiceA>(namedArgs: namedArgs),
         serviceLocator.resolve<ServiceB>(namedArgs: namedArgs),
         serviceLocator.resolve<ServiceD>(namedArgs: namedArgs)),
-    interfaces: [ServiceC, Object, AbstractService],
+    interfaces: {AbstractService, ServiceC},
     name: 'blafoo',
     key: null,
     environment: 'test',
@@ -46,7 +46,7 @@ void registerDependencies() {
       serviceLocator.resolve<ServiceA>(namedArgs: namedArgs),
       anyDouble: namedArgs['anyDouble'] as double,
     ),
-    interfaces: [ServiceD, Object, AbstractService],
+    interfaces: {AbstractService, ServiceD},
     name: null,
     key: null,
     environment: null,
