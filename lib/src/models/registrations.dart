@@ -1,6 +1,59 @@
 import 'package:zef_di_abstractions_generator/src/models/import_path.dart';
 
 abstract class RegistrationData {
+  const RegistrationData();
+
+  Map<String, dynamic> toJson();
+
+  factory RegistrationData.fromJson(Map<String, dynamic> json) {
+    if (json.containsKey('registrations')) {
+      return ModuleRegistration.fromJson(json);
+    } else {
+      return TypeRegistration.fromJson(json);
+    }
+  }
+}
+
+class ModuleRegistration extends RegistrationData {
+  final List<TypeRegistration> registrations;
+  final Set<ImportPath> importPaths;
+
+  ModuleRegistration({
+    required this.registrations,
+    required this.importPaths,
+  });
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'registrations': registrations.map((e) => e.toJson()).toList(),
+      'importPaths': importPaths.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  factory ModuleRegistration.fromJson(Map<String, dynamic> json) {
+    List<TypeRegistration> registrations =
+        (json['registrations'] as List<dynamic>? ?? [])
+            .map((e) => TypeRegistration.fromJson(e as Map<String, dynamic>))
+            .toList();
+
+    Set<ImportPath> importPaths = (json['importPaths'] as List<dynamic>? ?? [])
+        .map((e) => ImportPath.fromJson(e as Map<String, dynamic>))
+        .toSet();
+
+    return ModuleRegistration(
+      registrations: registrations,
+      importPaths: importPaths,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'ModuleRegistration{registrations: $registrations, importPaths: $importPaths}';
+  }
+}
+
+abstract class TypeRegistration extends RegistrationData {
   final ImportPath importPath;
   final String className;
   final List<SuperTypeData> interfaces;
@@ -8,7 +61,7 @@ abstract class RegistrationData {
   final dynamic key;
   final String? environment;
 
-  RegistrationData({
+  TypeRegistration({
     required this.importPath,
     required this.className,
     this.interfaces = const [],
@@ -17,6 +70,7 @@ abstract class RegistrationData {
     this.environment,
   });
 
+  @override
   Map<String, dynamic> toJson() {
     return {
       'importPath': importPath.toJson(),
@@ -28,7 +82,7 @@ abstract class RegistrationData {
     };
   }
 
-  factory RegistrationData.fromJson(Map<String, dynamic> json) {
+  factory TypeRegistration.fromJson(Map<String, dynamic> json) {
     if (json.containsKey('factoryMethod')) {
       return FactoryData.fromJson(json);
     } else if (json.containsKey('returnType')) {
@@ -63,9 +117,14 @@ class SuperTypeData {
       className: json['className'],
     );
   }
+
+  @override
+  String toString() {
+    return 'SuperTypeData{importPath: $importPath, className: $className}';
+  }
 }
 
-class InstanceData extends RegistrationData {
+class InstanceData extends TypeRegistration {
   final List<String> dependencies;
 
   InstanceData({
@@ -101,9 +160,14 @@ class InstanceData extends RegistrationData {
       environment: json['environment'],
     );
   }
+
+  @override
+  String toString() {
+    return 'InstanceData{importPath: $importPath, className: $className, dependencies: $dependencies, interfaces: $interfaces, name: $name, key: $key, environment: $environment}';
+  }
 }
 
-class FactoryData extends RegistrationData {
+class FactoryData extends TypeRegistration {
   final List<String> dependencies;
   final String? factoryMethod;
   final Map<String, String> namedArgs;
@@ -149,9 +213,14 @@ class FactoryData extends RegistrationData {
       environment: json['environment'],
     );
   }
+
+  @override
+  String toString() {
+    return 'FactoryData{importPath: $importPath, className: $className, dependencies: $dependencies, factoryMethod: $factoryMethod, namedArgs: $namedArgs, interfaces: $interfaces, name: $name, key: $key, environment: $environment}';
+  }
 }
 
-class LazyData extends RegistrationData {
+class LazyData extends TypeRegistration {
   final List<String> dependencies;
   final String returnType;
 
@@ -192,5 +261,10 @@ class LazyData extends RegistrationData {
       key: json['key'],
       environment: json['environment'],
     );
+  }
+
+  @override
+  String toString() {
+    return 'LazyData{importPath: $importPath, className: $className, returnType: $returnType, dependencies: $dependencies, interfaces: $interfaces, name: $name, key: $key, environment: $environment}';
   }
 }

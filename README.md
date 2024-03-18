@@ -199,6 +199,37 @@ void main(List<String> arguments) {
 
 This lazy registration feature is especially useful for services that are resource-intensive to create or are used infrequently, allowing your application to start faster and consume less memory during initialization.
 
+## Registering external dependencies
+
+You can also register classes which come from other packages. As you cannot annotate them directly, you need to define a `Module`:
+
+```dart
+@DependencyModule()
+abstract class ExternalClassesModule {
+  // Instances need to be registered with a getter
+  @RegisterInstance()
+  ExternalClassA get externalClassA;
+
+  // Factory registrations are no getters, instead they are methods
+  @RegisterFactory()
+  ExternalClassB externalClassB(ExternalClassA externalClassA) =>
+      ExternalClassB(externalClassA);
+
+  // Lazies are also methods
+  @RegisterLazy()
+  ExternalClassC externalClassC(
+    ExternalClassA externalClassA,
+    ExternalClassB externalClassB,
+  ) =>
+      ExternalClassC(
+        externalClassA,
+        externalClassB,
+      );
+}
+```
+
+The code will be generated into the same class as if you would have annotated the classes directly. See `dependency_registration.g.dart`
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues, pull requests, or suggestions to improve the tool.

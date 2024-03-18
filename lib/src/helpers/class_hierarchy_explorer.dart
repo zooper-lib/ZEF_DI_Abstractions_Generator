@@ -9,13 +9,14 @@ import 'import_path_resolver.dart';
 class ClassHierarchyExplorer {
   static Set<SuperTypeData> explore(
       ClassElement classElement, BuildStep buildStep) {
-    return _exploreClassHierarchy(classElement, buildStep, {});
+    return _exploreClassHierarchy(classElement, buildStep, {}, true);
   }
 
   static Set<SuperTypeData> _exploreClassHierarchy(
     ClassElement classElement,
     BuildStep buildStep,
     Set<SuperTypeData> visitedClasses,
+    bool isInitialCall,
   ) {
     if (_isFromDartSdk(classElement.librarySource.uri)) {
       return visitedClasses;
@@ -23,10 +24,11 @@ class ClassHierarchyExplorer {
 
     _exploreSuperclassAndInterfaces(classElement, buildStep, visitedClasses);
 
-    if (!_alreadyVisited(classElement, visitedClasses, buildStep)) {
+    if (!isInitialCall &&
+        !_alreadyVisited(classElement, visitedClasses, buildStep)) {
       visitedClasses.add(SuperTypeData(
-        importPath:
-            ImportPathResolver.determineImportPath(classElement, buildStep),
+        importPath: ImportPathResolver.determineImportPathForClass(
+            classElement, buildStep),
         className: classElement.name,
       ));
     }
@@ -52,7 +54,7 @@ class ClassHierarchyExplorer {
     if (element is ClassElement &&
         !_isFromDartSdk(element.librarySource.uri) &&
         !_alreadyVisited(element, visitedClasses, buildStep)) {
-      _exploreClassHierarchy(element, buildStep, visitedClasses);
+      _exploreClassHierarchy(element, buildStep, visitedClasses, false);
     }
   }
 
@@ -62,7 +64,7 @@ class ClassHierarchyExplorer {
     BuildStep buildStep,
   ) {
     final ImportPath importPath =
-        ImportPathResolver.determineImportPath(classElement, buildStep);
+        ImportPathResolver.determineImportPathForClass(classElement, buildStep);
     return visitedClasses.any((element) =>
         element.className == classElement.name &&
         element.importPath.toString() == importPath.toString());
