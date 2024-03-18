@@ -2,11 +2,7 @@ import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 import 'package:zef_di_inglue/zef_di_inglue.dart';
 
 import 'dependency_registration.g.dart';
-import 'test_files/abstract_service.dart';
-import 'test_files/service_a.dart';
-import 'test_files/service_b.dart';
-import 'test_files/service_c.dart';
-import 'test_files/service_d.dart';
+import 'test_files/services.dart';
 
 void main(List<String> arguments) {
   ServiceLocatorBuilder().withAdapter(InglueServiceLocatorAdapter()).build();

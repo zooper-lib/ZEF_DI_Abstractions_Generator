@@ -2,7 +2,9 @@ import 'dart:convert';
 
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
+import 'package:zef_di_abstractions_generator/src/helpers/annotation_processor.dart';
 import 'package:zef_di_abstractions_generator/src/helpers/registration_data_collector.dart';
+import '../helpers/module_data_collector.dart';
 import '../models/registrations.dart';
 
 class InformationCollectorBuilder implements Builder {
@@ -13,17 +15,35 @@ class InformationCollectorBuilder implements Builder {
 
   @override
   Future<void> build(BuildStep buildStep) async {
-    final resolver = buildStep.resolver;
-    if (!await resolver.isLibrary(buildStep.inputId)) return;
+    // Only process library elements
+    if (await buildStep.resolver.isLibrary(buildStep.inputId) == false) {
+      return;
+    }
 
     final LibraryElement library = await buildStep.inputLibrary;
-    final registrations = library.topLevelElements
-        .whereType<ClassElement>()
-        .expand((e) =>
-            [RegistrationDataCollector.collectFromClassElement(e, buildStep)])
-        .where((e) => e != null)
-        .cast<RegistrationData>()
-        .toList();
+    final registrations = <RegistrationData>[];
+
+    for (var element in library.topLevelElements.whereType<ClassElement>()) {
+      if (AnnotationProcessor.isTypeRegistration(element)) {
+        final classRegistration = RegistrationDataCollector.collect(
+          element,
+          buildStep,
+        );
+
+        if (classRegistration != null) {
+          registrations.add(classRegistration);
+        }
+      } else if (AnnotationProcessor.isDependencyModule(element)) {
+        final moduleRegistration = ModuleDataCollector.collect(
+          element,
+          buildStep,
+        );
+
+        if (moduleRegistration != null) {
+          registrations.add(moduleRegistration);
+        }
+      }
+    }
 
     // Serialize and write the collected registration data
     await _writeCollectedData(buildStep, registrations);

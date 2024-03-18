@@ -1,10 +1,10 @@
 import '../models/registrations.dart';
 
 class SortHelper {
-  static List<RegistrationData> topologicallySortRegistrations(
-      List<RegistrationData> registrations) {
+  static List<TypeRegistration> topologicallySortTypeRegistrations(
+      List<TypeRegistration> registrations) {
     final Map<String, Set<String>> graph = {};
-    final Map<String, RegistrationData> dataLookup = {};
+    final Map<String, TypeRegistration> dataLookup = {};
 
     // Initialize graph and lookup table
     for (var registration in registrations) {
@@ -18,7 +18,7 @@ class SortHelper {
     final List<String> sortedClassNames = performTopologicalSort(graph);
 
     // Map sorted class names back to their corresponding RegistrationData objects
-    final List<RegistrationData> sortedRegistrations = [];
+    final List<TypeRegistration> sortedRegistrations = [];
     for (var className in sortedClassNames) {
       final registrationData = dataLookup[className];
       if (registrationData != null) {
