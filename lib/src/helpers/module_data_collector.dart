@@ -49,7 +49,7 @@ class ModuleDataCollector {
       final annotationReader =
           ConstantReader(annotation.computeConstantValue());
 
-      // * We don't need to process Instance registrations here, as they are not allowed on methods
+      //* We don't need to process Instance registrations here, as they are not allowed on methods
 
       if (AnnotationProcessor.isRegisterFactory(annotationReader)) {
         if (method.enclosingElement is ClassElement) {
@@ -199,27 +199,29 @@ class ModuleDataCollector {
         ImportPathResolver.determineImportPathForClass(
             returnTypeElement, buildStep);
 
+    // Get the class name
     final className =
         method.returnType.getDisplayString(withNullability: false);
 
-    final dependencies = method.parameters
-        .map((param) => param.type.getDisplayString(withNullability: false))
-        .toList();
+    // Get the constructor parameters of the class
+    final List<String> constructorParams =
+        ConstructorProcessor.getConstructorParams(returnTypeElement);
 
     final returnType = element.name;
-    final name = annotationReader.peek('name')?.stringValue;
-    final key = annotationReader.peek('key')?.literalValue;
-    final environment = annotationReader.peek('environment')?.stringValue;
+
+    // Get the annotation attributes
+    final AnnotationAttributes attributes =
+        AnnotationProcessor.getAnnotationAttributes(element);
 
     return LazyData(
       importPath: importPath,
       className: className,
       returnType: returnType,
-      dependencies: dependencies,
+      dependencies: constructorParams,
       interfaces: superClasses.toList(),
-      name: name,
-      key: key,
-      environment: environment,
+      name: attributes.name,
+      key: attributes.key,
+      environment: attributes.environment,
     );
   }
 

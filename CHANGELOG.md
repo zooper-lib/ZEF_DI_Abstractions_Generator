@@ -1,6 +1,6 @@
 ## 1.2.0
 
--
+- Added Modules to register external dependencies
 
 ## 1.1.2
 
