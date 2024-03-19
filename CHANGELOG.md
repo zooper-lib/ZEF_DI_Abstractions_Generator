@@ -1,3 +1,7 @@
+## 1.2.1
+
+- Downgraded package `path` to version `1.8.0` for better compatibility
+
 ## 1.2.0
 
 - Added Modules to register external dependencies

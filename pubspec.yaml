@@ -1,6 +1,6 @@
 name: zef_di_abstractions_generator
 description: A code generator for the library zef_di_abstractions.
-version: 1.2.0
+version: 1.2.1
 homepage: https://www.zooper.dev
 repository: https://github.com/zooper-lib/ZEF_DI_Abstractions_Generator
 topics:
@@ -23,7 +23,7 @@ dependencies:
   dart_style: ^2.3.6
 
   collection: ^1.18.0
-  path: ^1.9.0
+  path: ^1.8.0
 
   zef_di_abstractions: ^1.3.0
 
