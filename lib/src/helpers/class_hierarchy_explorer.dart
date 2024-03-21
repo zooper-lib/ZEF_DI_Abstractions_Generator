@@ -53,7 +53,8 @@ class ClassHierarchyExplorer {
       Set<SuperTypeData> visitedClasses) {
     if (element is ClassElement &&
         !_isFromDartSdk(element.librarySource.uri) &&
-        !_alreadyVisited(element, visitedClasses, buildStep)) {
+        !_alreadyVisited(element, visitedClasses, buildStep) &&
+        !element.isPrivate) {
       _exploreClassHierarchy(element, buildStep, visitedClasses, false);
     }
   }
