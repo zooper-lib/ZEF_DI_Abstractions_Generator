@@ -1,3 +1,7 @@
+## 1.2.2
+
+- Added lines to ignore unused imports, and other warning
+
 ## 1.2.1
 
 - Downgraded package `path` to version `1.8.0` for better compatibility
