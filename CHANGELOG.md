@@ -1,3 +1,7 @@
+## 1.2.3
+
+- Excluded private classes from being added as interfaces
+
 ## 1.2.2
 
 - Added lines to ignore unused imports, and other warning
