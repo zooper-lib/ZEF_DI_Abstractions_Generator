@@ -1,6 +1,8 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ******************************************************************************
 
+// ignore_for_file: implementation_imports, depend_on_referenced_packages, unused_import
+
 import 'package:example/test_files/services.dart';
 import 'package:example/test_files/module_services.dart';
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';

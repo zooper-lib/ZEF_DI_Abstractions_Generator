@@ -45,7 +45,11 @@ class CodeGeneratorBuilder implements Builder {
     buffer
       ..writeln("// GENERATED CODE - DO NOT MODIFY BY HAND")
       ..writeln(
-          "// ******************************************************************************\n");
+          "// ******************************************************************************\n")
+      ..writeln()
+      ..writeln(
+          "// ignore_for_file: implementation_imports, depend_on_referenced_packages, unused_import")
+      ..writeln();
   }
 
   void _writeImports(
@@ -57,11 +61,6 @@ class CodeGeneratorBuilder implements Builder {
       final importPaths =
           ImportPathResolver.getImportPathsWithInterfaces(registration);
       uniqueImports.addAll(importPaths);
-
-      // Collect import paths from super types/interfaces
-      //for (var interface in registration.interfaces) {
-      //  uniqueImports.add(interface.importPath);
-      //}
     }
 
     // Add any default or fixed imports your system requires
