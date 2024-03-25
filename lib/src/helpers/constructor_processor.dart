@@ -1,8 +1,15 @@
 import 'package:analyzer/dart/element/element.dart';
 
 class ConstructorProcessor {
-  static Map<String, String> getNamedParameters(
-      ConstructorElement constructor) {
+  static ConstructorElement getConstructor(ClassElement element) {
+    // Attempt to find the default constructor; if not found, use the first constructor as a fallback
+    return element.unnamedConstructor ?? element.constructors.first;
+  }
+
+  static Map<String, String> getNamedParameters(ClassElement element) {
+    // Get the constructor
+    final constructor = getConstructor(element);
+
     return Map.fromEntries(constructor.parameters
         .where((param) => param.isNamed)
         .map((param) => MapEntry(
@@ -10,9 +17,8 @@ class ConstructorProcessor {
   }
 
   static List<String> getConstructorParams(ClassElement element) {
-    // Attempt to find the default constructor; if not found, use the first constructor as a fallback
-    final ConstructorElement constructor =
-        element.unnamedConstructor ?? element.constructors.first;
+    // Get the Constructor
+    final ConstructorElement constructor = getConstructor(element);
 
     // Use null-aware operators to handle the case where the constructor might be null
     return constructor.parameters

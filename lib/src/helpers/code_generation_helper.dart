@@ -1,7 +1,7 @@
 import '../models/registrations.dart';
 
 class CodeGenerationHelper {
-  static String generateInstanceRegistration(InstanceData instance) {
+  static String generateInstanceRegistration(SingletonData instance) {
     final dependencies =
         instance.dependencies.map((d) => "ServiceLocator.I.resolve(),").join();
 
@@ -28,7 +28,7 @@ class CodeGenerationHelper {
         );''';
   }
 
-  static String generateFactoryRegistration(FactoryData factory) {
+  static String generateFactoryRegistration(TransientData factory) {
     final interfaces = factory.interfaces.isNotEmpty
         ? "interfaces: {${factory.interfaces.map((i) => i.className).join(', ')}}"
         : "interfaces: null";
@@ -57,11 +57,12 @@ class CodeGenerationHelper {
         [dependencies, namedArgs].where((arg) => arg.isNotEmpty).join(', ');
 
     // Check if there's a factory method specified
-    if (factory.factoryMethod != null && factory.factoryMethod!.isNotEmpty) {
+    if (factory.factoryMethodName != null &&
+        factory.factoryMethodName!.isNotEmpty) {
       // If a factory method is specified, use it in the registration code
       return '''
           ServiceLocator.I.registerFactory<${factory.className}>(
-            (serviceLocator, namedArgs) => ${factory.className}.${factory.factoryMethod}(
+            (serviceLocator, namedArgs) => ${factory.className}.${factory.factoryMethodName}(
               $allArgs),
               $interfaces,
               $name,

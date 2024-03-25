@@ -8,7 +8,7 @@ class SortHelper {
 
     // Initialize graph and lookup table
     for (var registration in registrations) {
-      if (registration is InstanceData) {
+      if (registration is SingletonData) {
         graph[registration.className] = registration.dependencies.toSet();
       }
       dataLookup[registration.className] = registration;
@@ -30,7 +30,7 @@ class SortHelper {
 
     // Add FactoryData objects at the end, assuming they don't have dependencies affecting the order
     for (var registration in registrations) {
-      if ((registration is FactoryData || registration is LazyData) &&
+      if ((registration is TransientData || registration is LazyData) &&
           !sortedClassNames.contains(registration.className)) {
         sortedRegistrations.add(registration);
       }

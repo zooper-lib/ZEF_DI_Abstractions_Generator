@@ -17,10 +17,10 @@ class RegistrationDataCollector {
     for (var annotation in element.metadata) {
       var annotationReader = ConstantReader(annotation.computeConstantValue());
 
-      if (AnnotationProcessor.isRegisterInstance(annotationReader)) {
-        return _collectInstanceData(element, buildStep);
-      } else if (AnnotationProcessor.isRegisterFactory(annotationReader)) {
-        return _collectFactoryData(element, buildStep);
+      if (AnnotationProcessor.isRegisterSingleton(annotationReader)) {
+        return _collectSingletonData(element, buildStep, annotationReader);
+      } else if (AnnotationProcessor.isRegisterTransient(annotationReader)) {
+        return _collectTransientData(element, buildStep);
       } else if (AnnotationProcessor.isRegisterLazy(annotationReader)) {
         return _collectLazyData(element, buildStep);
       }
@@ -30,17 +30,30 @@ class RegistrationDataCollector {
     return null;
   }
 
-  static InstanceData _collectInstanceData(
+  static SingletonData _collectSingletonData(
     ClassElement element,
     BuildStep buildStep,
+    ConstantReader annotationReader,
   ) {
     // Get the super classes of the class
     final Set<SuperTypeData> superClasses =
         ClassHierarchyExplorer.explore(element, buildStep);
 
-    // Get the constructor parameters of the class
-    final List<String> constructorParams =
-        ConstructorProcessor.getConstructorParams(element);
+    // Get the factory method name, if any
+    String? factoryMethodName = _findAnnotatedFactoryMethodName(element);
+
+    List<String> constructorParams = [];
+    Map<String, String> namedArgs = {};
+
+    if (factoryMethodName != null) {
+      // Factory method is present, collect named arguments from it
+      MethodElement factoryMethod = element.getMethod(factoryMethodName)!;
+      namedArgs = MethodProcessor.getNamedParameters(factoryMethod);
+    } else {
+      // No factory method, collect named arguments from the constructor
+      constructorParams = ConstructorProcessor.getConstructorParams(element);
+      namedArgs = ConstructorProcessor.getNamedParameters(element);
+    }
 
     // Get the annotation attributes
     final AnnotationAttributes attributes =
@@ -50,10 +63,12 @@ class RegistrationDataCollector {
     final ImportPath importPath =
         ImportPathResolver.determineImportPathForClass(element, buildStep);
 
-    return InstanceData(
+    return SingletonData(
       importPath: importPath,
       className: element.name,
+      factoryMethodName: factoryMethodName,
       dependencies: constructorParams,
+      namedArgs: namedArgs,
       interfaces: superClasses.toList(),
       name: attributes.name,
       key: attributes.key,
@@ -61,15 +76,11 @@ class RegistrationDataCollector {
     );
   }
 
-  static FactoryData _collectFactoryData(
+  static TransientData _collectTransientData(
       ClassElement element, BuildStep buildStep) {
     // Get the super classes of the class
     final Set<SuperTypeData> superClasses =
         ClassHierarchyExplorer.explore(element, buildStep);
-
-    // Get the constructor parameters of the class
-    final List<String> constructorParams =
-        ConstructorProcessor.getConstructorParams(element);
 
     // Get the annotation attributes
     final AnnotationAttributes attributes =
@@ -81,6 +92,8 @@ class RegistrationDataCollector {
 
     // Get the factory method name, if any
     String? factoryMethodName = _findAnnotatedFactoryMethodName(element);
+
+    List<String> constructorParams = [];
     Map<String, String> namedArgs = {};
 
     if (factoryMethodName != null) {
@@ -89,17 +102,16 @@ class RegistrationDataCollector {
       namedArgs = MethodProcessor.getNamedParameters(factoryMethod);
     } else {
       // No factory method, collect named arguments from the constructor
-      ConstructorElement? constructor =
-          element.unnamedConstructor ?? element.constructors.first;
-      namedArgs = ConstructorProcessor.getNamedParameters(constructor);
+      constructorParams = ConstructorProcessor.getConstructorParams(element);
+      namedArgs = ConstructorProcessor.getNamedParameters(element);
     }
 
-    return FactoryData(
+    return TransientData(
       interfaces: superClasses.toList(),
       importPath: importPath,
       className: element.name,
       dependencies: constructorParams,
-      factoryMethod: factoryMethodName,
+      factoryMethodName: factoryMethodName,
       namedArgs: namedArgs,
       name: attributes.name,
       key: attributes.key,

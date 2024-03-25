@@ -83,10 +83,10 @@ class CodeGeneratorBuilder implements Builder {
     codeBuffer.writeln("void registerDependencies() {");
 
     for (var registration in registrations) {
-      if (registration is InstanceData) {
+      if (registration is SingletonData) {
         codeBuffer.writeln(
             CodeGenerationHelper.generateInstanceRegistration(registration));
-      } else if (registration is FactoryData) {
+      } else if (registration is TransientData) {
         codeBuffer.writeln(
             CodeGenerationHelper.generateFactoryRegistration(registration));
       } else if (registration is LazyData) {

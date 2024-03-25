@@ -51,7 +51,7 @@ class ModuleDataCollector {
 
       //* We don't need to process Instance registrations here, as they are not allowed on methods
 
-      if (AnnotationProcessor.isRegisterFactory(annotationReader)) {
+      if (AnnotationProcessor.isRegisterTransient(annotationReader)) {
         if (method.enclosingElement is ClassElement) {
           registrations.add(_collectFactoryData(method, buildStep,
               annotationReader, method.enclosingElement as ClassElement));
@@ -77,7 +77,7 @@ class ModuleDataCollector {
       final annotationReader =
           ConstantReader(annotation.computeConstantValue());
 
-      if (AnnotationProcessor.isRegisterInstance(annotationReader)) {
+      if (AnnotationProcessor.isRegisterSingleton(annotationReader)) {
         if (getter.enclosingElement is ClassElement) {
           registrations.add(_collectInstanceData(getter, buildStep,
               annotationReader, getter.enclosingElement as ClassElement));
@@ -88,7 +88,7 @@ class ModuleDataCollector {
     return registrations;
   }
 
-  static InstanceData _collectInstanceData(
+  static SingletonData _collectInstanceData(
     PropertyAccessorElement getter,
     BuildStep buildStep,
     ConstantReader annotationReader,
@@ -116,7 +116,7 @@ class ModuleDataCollector {
     final AnnotationAttributes attributes =
         AnnotationProcessor.getAnnotationAttributes(getter);
 
-    return InstanceData(
+    return SingletonData(
       importPath: importPath,
       className: returnTypeElement.name,
       interfaces: superTypes.toList(),
@@ -127,7 +127,7 @@ class ModuleDataCollector {
     );
   }
 
-  static FactoryData _collectFactoryData(
+  static TransientData _collectFactoryData(
     MethodElement method,
     BuildStep buildStep,
     ConstantReader annotationReader,
@@ -166,12 +166,12 @@ class ModuleDataCollector {
     final AnnotationAttributes attributes =
         AnnotationProcessor.getAnnotationAttributes(classElement);
 
-    return FactoryData(
+    return TransientData(
       interfaces: superClasses.toList(),
       importPath: importPath,
       className: className,
       dependencies: constructorParams,
-      factoryMethod: null, //* We dont have a factory method here
+      factoryMethodName: null, //* We dont have a factory method here
       namedArgs: namedArgs,
       name: attributes.name,
       key: attributes.key,
