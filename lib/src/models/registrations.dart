@@ -192,9 +192,9 @@ class TransientData extends TypeRegistration {
   TransientData({
     required super.importPath,
     required super.className,
-    this.dependencies = const [],
-    this.factoryMethodName,
-    this.namedArgs = const {},
+    required this.dependencies,
+    required this.factoryMethodName,
+    required this.namedArgs,
     super.interfaces,
     super.name,
     super.key,

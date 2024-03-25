@@ -6,7 +6,7 @@ abstract class AbstractService {
   void doSomething();
 }
 
-@RegisterInstance(name: 'foobla')
+@RegisterSingleton(name: 'foobla')
 class ServiceA implements AbstractService {
   @override
   void doSomething() {
@@ -26,7 +26,7 @@ class ServiceB implements AbstractService {
   }
 }
 
-@RegisterFactory(name: 'blafoo', environment: 'test')
+@RegisterTransient(name: 'blafoo', environment: 'test')
 class ServiceC implements AbstractService {
   final ServiceA serviceA;
   final ServiceB serviceB;
@@ -44,7 +44,7 @@ class ServiceC implements AbstractService {
   }
 }
 
-@RegisterFactory()
+@RegisterTransient()
 class ServiceD implements AbstractService {
   final ServiceA _serviceA;
   final double _anyDouble;

@@ -1,12 +1,12 @@
 import 'package:example/test_files/module_services.dart';
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 
-@DependencyModule()
+//@DependencyModule()
 abstract class TestModule {
-  @RegisterInstance(environment: 'test2')
+  @RegisterSingleton(environment: 'test2')
   ModuleServiceA get moduleServiceA;
 
-  @RegisterFactory()
+  @RegisterTransient()
   ModuleServiceB moduleServiceB(ModuleServiceA moduleServiceA) =>
       ModuleServiceB(moduleServiceA);
 
@@ -15,11 +15,11 @@ abstract class TestModule {
     ModuleServiceA moduleServiceA,
     ModuleServiceB moduleServiceB,
   ) =>
-      ModuleServiceC(
+      ModuleServiceC.create(
         moduleServiceA,
         moduleServiceB,
       );
 
-  @RegisterInstance()
+  @RegisterTransient()
   ModuleServiceD get moduleServiceD;
 }

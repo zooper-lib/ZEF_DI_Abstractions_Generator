@@ -1,7 +1,9 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
+import 'package:collection/collection.dart';
 import 'package:source_gen/source_gen.dart';
 import 'package:zef_di_abstractions_generator/src/helpers/constructor_processor.dart';
+import 'package:zef_di_abstractions_generator/src/helpers/method_processor.dart';
 
 import '../models/annotation_attributes.dart';
 import '../models/import_path.dart';
@@ -21,17 +23,43 @@ class ModuleDataCollector {
     }
 
     // Collect registration data and import paths from factories and lazies, aka methods
-    for (var method in element.methods) {
-      registrations.addAll(collectFromModuleMethod(method, buildStep));
+    /* for (var method in element.methods) {
+      registrations.addAll(_collectFromModuleMethod(method, buildStep));
       importPaths.addAll(_collectImportPathsFromReturnType(method, buildStep));
       importPaths.addAll(_collectImportPathsFromParameters(method, buildStep));
     }
 
     // Extend to collect registration data and import paths from instances, aka getters
     element.accessors.where((accessor) => accessor.isGetter).forEach((getter) {
-      registrations.addAll(collectFromModuleGetter(getter, buildStep));
+      registrations.addAll(_collectFromModuleGetter(getter, buildStep));
       importPaths.addAll(_collectImportPathsFromReturnType(getter, buildStep));
-    });
+    }); */
+
+    // Collect from getters and methods for both singletons and transients
+    for (var accessor
+        in element.accessors.where((accessor) => accessor.isGetter)) {
+      var registration = _collectFromAccessor(accessor, buildStep);
+      if (registration != null) {
+        registrations.add(registration);
+        importPaths.add(ImportPathResolver.determineImportPathForClass(
+            accessor.returnType.element as ClassElement, buildStep));
+      }
+    }
+
+    for (var method in element.methods.where((method) => !method.isAbstract)) {
+      var registration = _collectFromMethod(method, buildStep);
+      if (registration != null) {
+        registrations.add(registration);
+        importPaths.add(ImportPathResolver.determineImportPathForClass(
+            method.returnType.element as ClassElement, buildStep));
+        for (var param in method.parameters) {
+          if (param.type.element is ClassElement) {
+            importPaths.add(ImportPathResolver.determineImportPathForClass(
+                param.type.element as ClassElement, buildStep));
+          }
+        }
+      }
+    }
 
     return ModuleRegistration(
       registrations: registrations,
@@ -39,144 +67,95 @@ class ModuleDataCollector {
     );
   }
 
-  static List<TypeRegistration> collectFromModuleMethod(
-    MethodElement method,
-    BuildStep buildStep,
-  ) {
-    final List<TypeRegistration> registrations = [];
+  static TypeRegistration? _collectFromAccessor(
+      PropertyAccessorElement accessor, BuildStep buildStep) {
+    var annotationReader = accessor.metadata
+        .map((m) => ConstantReader(m.computeConstantValue()))
+        .firstWhereOrNull(
+          (reader) =>
+              AnnotationProcessor.isRegisterSingleton(reader) ||
+              AnnotationProcessor.isRegisterTransient(reader),
+        );
+    if (annotationReader == null) return null;
 
-    for (var annotation in method.metadata) {
-      final annotationReader =
-          ConstantReader(annotation.computeConstantValue());
-
-      //* We don't need to process Instance registrations here, as they are not allowed on methods
-
-      if (AnnotationProcessor.isRegisterTransient(annotationReader)) {
-        if (method.enclosingElement is ClassElement) {
-          registrations.add(_collectFactoryData(method, buildStep,
-              annotationReader, method.enclosingElement as ClassElement));
-        }
-      } else if (AnnotationProcessor.isRegisterLazy(annotationReader)) {
-        if (method.enclosingElement is ClassElement) {
-          registrations.add(_collectLazyData(method, buildStep,
-              annotationReader, method.enclosingElement as ClassElement));
-        }
-      }
-    }
-
-    return registrations;
+    return _collectRegistrationData(accessor, buildStep, annotationReader);
   }
 
-  static List<TypeRegistration> collectFromModuleGetter(
-    PropertyAccessorElement getter,
-    BuildStep buildStep,
-  ) {
-    final List<TypeRegistration> registrations = [];
+  static TypeRegistration? _collectFromMethod(
+      MethodElement method, BuildStep buildStep) {
+    var annotationReader = method.metadata
+        .map((m) => ConstantReader(m.computeConstantValue()))
+        .firstWhereOrNull(
+          (reader) =>
+              AnnotationProcessor.isRegisterSingleton(reader) ||
+              AnnotationProcessor.isRegisterTransient(reader),
+        );
+    if (annotationReader == null) return null;
 
-    for (var annotation in getter.metadata) {
-      final annotationReader =
-          ConstantReader(annotation.computeConstantValue());
-
-      if (AnnotationProcessor.isRegisterSingleton(annotationReader)) {
-        if (getter.enclosingElement is ClassElement) {
-          registrations.add(_collectInstanceData(getter, buildStep,
-              annotationReader, getter.enclosingElement as ClassElement));
-        }
-      }
-    }
-
-    return registrations;
+    return _collectRegistrationData(method, buildStep, annotationReader);
   }
 
-  static SingletonData _collectInstanceData(
-    PropertyAccessorElement getter,
-    BuildStep buildStep,
-    ConstantReader annotationReader,
-    ClassElement classElement,
-  ) {
-    var returnTypeElement = getter.returnType.element;
+  static TypeRegistration _collectRegistrationData(ExecutableElement element,
+      BuildStep buildStep, ConstantReader annotationReader) {
+    var returnTypeElement = element.returnType.element;
     if (returnTypeElement is! ClassElement) {
-      throw Exception("Return type of the getter is not a class.");
+      throw Exception("The return type of the element is not a class.");
     }
 
-    // Determine the import path for the getter's return type
-    final ImportPath importPath =
-        ImportPathResolver.determineImportPathForClass(
-            returnTypeElement, buildStep);
+    final isSingleton =
+        AnnotationProcessor.isRegisterSingleton(annotationReader);
+    final isTransient =
+        AnnotationProcessor.isRegisterTransient(annotationReader);
+    final isLazy = AnnotationProcessor.isRegisterLazy(annotationReader);
 
-    // Explore super types for interfaces
     final Set<SuperTypeData> superTypes =
         ClassHierarchyExplorer.explore(returnTypeElement, buildStep);
-
-    // Get the constructor parameters of the class
-    final List<String> constructorParams =
-        ConstructorProcessor.getConstructorParams(returnTypeElement);
-
-    // Get the annotation attributes
-    final AnnotationAttributes attributes =
-        AnnotationProcessor.getAnnotationAttributes(getter);
-
-    return SingletonData(
-      importPath: importPath,
-      className: returnTypeElement.name,
-      interfaces: superTypes.toList(),
-      name: attributes.name,
-      key: attributes.key,
-      environment: attributes.environment,
-      dependencies: constructorParams,
-    );
-  }
-
-  static TransientData _collectFactoryData(
-    MethodElement method,
-    BuildStep buildStep,
-    ConstantReader annotationReader,
-    ClassElement classElement,
-  ) {
-    var returnTypeElement = method.returnType.element;
-    if (returnTypeElement is! ClassElement) {
-      throw Exception("Return type of the factory method is not a class.");
-    }
-
-    // Get the super classes of the class
-    final Set<SuperTypeData> superClasses =
-        ClassHierarchyExplorer.explore(returnTypeElement, buildStep);
-
-    // Get the import path of the class
     final ImportPath importPath =
         ImportPathResolver.determineImportPathForClass(
             returnTypeElement, buildStep);
-
-    // Get the class name
-    final className =
-        method.returnType.getDisplayString(withNullability: false);
-
-    // Get the constructor parameters of the class
-    final List<String> constructorParams =
-        ConstructorProcessor.getConstructorParams(returnTypeElement);
-
-    // Get the constructor parameters
-    //* As we dont have a factory method, we will directly use the constructor and its named parameters
-    ConstructorElement? constructor =
-        classElement.unnamedConstructor ?? classElement.constructors.first;
-    Map<String, String> namedArgs =
-        ConstructorProcessor.getNamedParameters(constructor);
-
-    // Get the annotation attributes
     final AnnotationAttributes attributes =
-        AnnotationProcessor.getAnnotationAttributes(classElement);
+        AnnotationProcessor.getAnnotationAttributes(element);
+    final List<String> dependencies = element.parameters
+        .where((p) => !p.isNamed)
+        .map((p) => p.type.getDisplayString(withNullability: false))
+        .toList();
+    final Map<String, String> namedArgs =
+        MethodProcessor.getNamedParameters(element);
 
-    return TransientData(
-      interfaces: superClasses.toList(),
-      importPath: importPath,
-      className: className,
-      dependencies: constructorParams,
-      factoryMethodName: null, //* We dont have a factory method here
-      namedArgs: namedArgs,
-      name: attributes.name,
-      key: attributes.key,
-      environment: attributes.environment,
-    );
+    return isSingleton
+        ? SingletonData(
+            importPath: importPath,
+            className: returnTypeElement.name,
+            factoryMethodName: null,
+            dependencies: dependencies,
+            namedArgs: namedArgs,
+            interfaces: superTypes.toList(),
+            name: attributes.name,
+            key: attributes.key,
+            environment: attributes.environment,
+          )
+        : isTransient
+            ? TransientData(
+                importPath: importPath,
+                className: returnTypeElement.name,
+                factoryMethodName: null,
+                dependencies: dependencies,
+                namedArgs: namedArgs,
+                interfaces: superTypes.toList(),
+                name: attributes.name,
+                key: attributes.key,
+                environment: attributes.environment,
+              )
+            : LazyData(
+                importPath: importPath,
+                className: returnTypeElement.name,
+                returnType: returnTypeElement.name,
+                dependencies: dependencies,
+                interfaces: superTypes.toList(),
+                name: attributes.name,
+                key: attributes.key,
+                environment: attributes.environment,
+              );
   }
 
   static LazyData _collectLazyData(
@@ -259,5 +238,24 @@ class ModuleDataCollector {
     }
 
     return importPaths;
+  }
+
+  static void _collectImportPathsForExecutable(ExecutableElement executable,
+      BuildStep buildStep, Set<ImportPath> importPaths) {
+    // Collect import path for the return type
+    var returnTypeElement = executable.returnType.element;
+    if (returnTypeElement is ClassElement) {
+      importPaths.add(ImportPathResolver.determineImportPathForClass(
+          returnTypeElement, buildStep));
+    }
+
+    // Collect import paths for parameter types
+    for (var parameter in executable.parameters) {
+      var parameterTypeElement = parameter.type.element;
+      if (parameterTypeElement is ClassElement) {
+        importPaths.add(ImportPathResolver.determineImportPathForClass(
+            parameterTypeElement, buildStep));
+      }
+    }
   }
 }

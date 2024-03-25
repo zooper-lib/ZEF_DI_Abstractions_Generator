@@ -21,7 +21,7 @@ class ModuleServiceC {
   final ModuleServiceA serviceA;
   final ModuleServiceB serviceB;
 
-  ModuleServiceC(
+  ModuleServiceC.create(
     this.serviceA,
     this.serviceB,
   );

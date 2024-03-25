@@ -9,7 +9,9 @@ dependencies:
   zef_di_abstractions:
     path: ../../zef_di_abstractions
 
-  zef_di_inglue: ^1.1.1
+  #zef_di_inglue: ^1.1.1
+  zef_di_inglue:
+    path: ../../zef_di_inglue
 
   zef_helpers_lazy: ^1.0.0
 
