@@ -3,7 +3,6 @@ import 'package:build/build.dart';
 import 'package:collection/collection.dart';
 import 'package:source_gen/source_gen.dart';
 import 'package:zef_di_abstractions_generator/src/helpers/constructor_processor.dart';
-import 'package:zef_di_abstractions_generator/src/helpers/method_processor.dart';
 
 import '../models/annotation_attributes.dart';
 import '../models/import_path.dart';
@@ -76,7 +75,9 @@ class ModuleDataCollector {
               AnnotationProcessor.isRegisterSingleton(reader) ||
               AnnotationProcessor.isRegisterTransient(reader),
         );
-    if (annotationReader == null) return null;
+    if (annotationReader == null) {
+      return null;
+    }
 
     return _collectRegistrationData(accessor, buildStep, annotationReader);
   }
@@ -90,7 +91,11 @@ class ModuleDataCollector {
               AnnotationProcessor.isRegisterSingleton(reader) ||
               AnnotationProcessor.isRegisterTransient(reader),
         );
-    if (annotationReader == null) return null;
+
+    // If there is no annotation, return null
+    if (annotationReader == null) {
+      return null;
+    }
 
     return _collectRegistrationData(method, buildStep, annotationReader);
   }
@@ -108,54 +113,102 @@ class ModuleDataCollector {
         AnnotationProcessor.isRegisterTransient(annotationReader);
     final isLazy = AnnotationProcessor.isRegisterLazy(annotationReader);
 
+    // Get the factory method name, if any
+    String? factoryConstructorName =
+        ConstructorProcessor.getConstructorName(returnTypeElement);
+
+    // Get the super classes of the class
     final Set<SuperTypeData> superTypes =
         ClassHierarchyExplorer.explore(returnTypeElement, buildStep);
+
+    // Get the import path of the class
     final ImportPath importPath =
         ImportPathResolver.determineImportPathForClass(
             returnTypeElement, buildStep);
+
+    // Get the annotation attributes
     final AnnotationAttributes attributes =
         AnnotationProcessor.getAnnotationAttributes(element);
-    final List<String> dependencies = element.parameters
-        .where((p) => !p.isNamed)
-        .map((p) => p.type.getDisplayString(withNullability: false))
-        .toList();
-    final Map<String, String> namedArgs =
-        MethodProcessor.getNamedParameters(element);
 
-    return isSingleton
-        ? SingletonData(
-            importPath: importPath,
-            className: returnTypeElement.name,
-            factoryMethodName: null,
-            dependencies: dependencies,
-            namedArgs: namedArgs,
-            interfaces: superTypes.toList(),
-            name: attributes.name,
-            key: attributes.key,
-            environment: attributes.environment,
-          )
-        : isTransient
-            ? TransientData(
-                importPath: importPath,
-                className: returnTypeElement.name,
-                factoryMethodName: null,
-                dependencies: dependencies,
-                namedArgs: namedArgs,
-                interfaces: superTypes.toList(),
-                name: attributes.name,
-                key: attributes.key,
-                environment: attributes.environment,
-              )
-            : LazyData(
-                importPath: importPath,
-                className: returnTypeElement.name,
-                returnType: returnTypeElement.name,
-                dependencies: dependencies,
-                interfaces: superTypes.toList(),
-                name: attributes.name,
-                key: attributes.key,
-                environment: attributes.environment,
-              );
+    // Get the dependencies
+    final List<String> dependencies = _collectDependencies(element);
+
+    // Get the named arguments
+    final Map<String, String> namedArgs = _collectNamedArgs(element);
+
+    if (isSingleton) {
+      return SingletonData(
+        importPath: importPath,
+        className: returnTypeElement.name,
+        factoryMethodName: factoryConstructorName,
+        dependencies: dependencies,
+        namedArgs: namedArgs,
+        interfaces: superTypes.toList(),
+        name: attributes.name,
+        key: attributes.key,
+        environment: attributes.environment,
+      );
+    } else if (isTransient) {
+      return TransientData(
+        importPath: importPath,
+        className: returnTypeElement.name,
+        factoryMethodName: factoryConstructorName,
+        dependencies: dependencies,
+        namedArgs: namedArgs,
+        interfaces: superTypes.toList(),
+        name: attributes.name,
+        key: attributes.key,
+        environment: attributes.environment,
+      );
+    } else if (isLazy) {
+      return LazyData(
+        importPath: importPath,
+        className: returnTypeElement.name,
+        returnType: returnTypeElement.name,
+        dependencies: dependencies,
+        interfaces: superTypes.toList(),
+        name: attributes.name,
+        key: attributes.key,
+        environment: attributes.environment,
+      );
+    } else {
+      throw Exception("Unknown registration type.");
+    }
+  }
+
+  static List<String> _collectDependencies(ExecutableElement element) {
+    if (element is MethodElement) {
+      // Collecting dependencies from method parameters
+      return element.parameters
+          .where((p) => !p.isNamed)
+          .map((p) => p.type.getDisplayString(withNullability: false))
+          .toList();
+    } else if (element is PropertyAccessorElement &&
+        element.returnType.element is ClassElement) {
+      // Collecting dependencies from the constructor of the return type of a getter
+      var returnTypeElement = element.returnType.element as ClassElement;
+      return ConstructorProcessor.getConstructorParams(returnTypeElement);
+    } else {
+      return [];
+    }
+  }
+
+  // Method to collect named arguments from a module method
+  static Map<String, String> _collectNamedArgs(ExecutableElement element) {
+    if (element is MethodElement) {
+      // Collecting named arguments from method parameters
+      return {
+        for (var param in element.parameters.where((p) => p.isNamed))
+          param.name: param.type.getDisplayString(withNullability: false)
+      };
+    } else if (element is PropertyAccessorElement &&
+        element.returnType.element is ClassElement) {
+      // Collecting named arguments from the constructor of the return type of a getter
+      var returnTypeElement = element.returnType.element as ClassElement;
+      return ConstructorProcessor.getNamedParameters(returnTypeElement);
+    } else {
+      return {};
+    }
   }
 
   static LazyData _collectLazyData(

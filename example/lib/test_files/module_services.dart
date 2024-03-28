@@ -1,48 +1,90 @@
-import 'services.dart';
+// ignore_for_file: unused_field
 
-class ModuleServiceA implements AbstractService {
+import 'singleton_services.dart';
+
+class ModuleNoDependencies implements SingletonService {
   @override
   void doSomething() {
-    print('ModuleServiceA');
+    print('$ModuleNoDependencies.doSomething');
   }
 }
 
-class ModuleServiceB {
-  final ModuleServiceA serviceA;
+class ModuleWithDependency {
+  final ModuleNoDependencies dependency;
 
-  ModuleServiceB(this.serviceA);
+  ModuleWithDependency(this.dependency);
 
   void doSomething() {
-    print('ModuleServiceB');
+    print('$ModuleNoDependencies.doSomething');
   }
 }
 
-class ModuleServiceC {
-  final ModuleServiceA serviceA;
-  final ModuleServiceB serviceB;
+class ModuleWithFactory {
+  ModuleWithFactory.create();
 
-  ModuleServiceC.create(
+  void doSomething() {
+    print('$ModuleWithFactory.doSomething');
+  }
+}
+
+class ModuleWithFactoryWithDependencies {
+  final ModuleNoDependencies serviceA;
+  final ModuleWithDependency serviceB;
+
+  ModuleWithFactoryWithDependencies.create(
     this.serviceA,
     this.serviceB,
   );
 
   void doSomething() {
-    print('ModuleServiceC');
+    print('$ModuleWithFactoryWithDependencies.doSomething');
   }
 }
 
-class ModuleServiceD {
-  final ModuleServiceA serviceA;
-  final ModuleServiceB serviceB;
-  final ModuleServiceC serviceC;
+class ModuleWithNamedArgs {
+  final double someValue;
 
-  ModuleServiceD(
-    this.serviceA,
-    this.serviceB,
-    this.serviceC,
-  );
+  ModuleWithNamedArgs({required this.someValue});
 
   void doSomething() {
-    print('ModuleServiceD');
+    print('$ModuleWithNamedArgs.doSomething');
+  }
+}
+
+class ModuleWithFactoryWithNamedArgs {
+  final double someValue;
+
+  ModuleWithFactoryWithNamedArgs.create({required this.someValue});
+
+  void doSomething() {
+    print('$ModuleWithFactoryWithNamedArgs.doSomething');
+  }
+}
+
+class ModuleWithDependencyWithNamedArgs {
+  final ModuleNoDependencies _dependency;
+  final double someValue;
+
+  ModuleWithDependencyWithNamedArgs(
+    this._dependency, {
+    required this.someValue,
+  });
+
+  void doSomething() {
+    print('$ModuleWithDependencyWithNamedArgs.doSomething');
+  }
+}
+
+class ModuleWithFactoryWithDependencyWithNamedArgs {
+  final ModuleNoDependencies _dependency;
+  final double someValue;
+
+  ModuleWithFactoryWithDependencyWithNamedArgs.create(
+    this._dependency, {
+    required this.someValue,
+  });
+
+  void doSomething() {
+    print('$ModuleWithFactoryWithDependencyWithNamedArgs.doSomething');
   }
 }

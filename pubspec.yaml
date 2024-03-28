@@ -27,7 +27,7 @@ dependencies:
 
   #zef_di_abstractions: ^2.0.0
   zef_di_abstractions:
-    path: ../zef_di_abstractions
+    path: ../ZEF_DI_Abstractions
 
   zef_helpers_lazy: ^1.0.0
 

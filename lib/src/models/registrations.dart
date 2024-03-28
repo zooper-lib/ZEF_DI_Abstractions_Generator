@@ -56,6 +56,7 @@ class ModuleRegistration extends RegistrationData {
 abstract class TypeRegistration extends RegistrationData {
   final ImportPath importPath;
   final String className;
+  final List<String> dependencies;
   final List<SuperTypeData> interfaces;
   final String? name;
   final dynamic key;
@@ -64,6 +65,7 @@ abstract class TypeRegistration extends RegistrationData {
   TypeRegistration({
     required this.importPath,
     required this.className,
+    required this.dependencies,
     this.interfaces = const [],
     this.name,
     this.key,
@@ -75,6 +77,7 @@ abstract class TypeRegistration extends RegistrationData {
     return {
       'importPath': importPath.toJson(),
       'className': className,
+      'dependencies': dependencies,
       'interfaces': interfaces,
       'name': name,
       'key': key,
@@ -88,7 +91,6 @@ abstract class TypeRegistration extends RegistrationData {
     switch (type) {
       case 'singleton':
         return SingletonData.fromJson(json);
-
       case 'transient':
         return TransientData.fromJson(json);
       case 'lazy':
@@ -131,20 +133,19 @@ class SuperTypeData {
 }
 
 class SingletonData extends TypeRegistration {
-  final List<String> dependencies;
   final String? factoryMethodName;
   final Map<String, String> namedArgs;
 
   SingletonData({
     required super.importPath,
     required super.className,
+    required super.dependencies,
+    required this.factoryMethodName,
+    required this.namedArgs,
     required super.interfaces,
     required super.name,
     required super.key,
     required super.environment,
-    required this.dependencies,
-    required this.factoryMethodName,
-    required this.namedArgs,
   });
 
   factory SingletonData.fromJson(Map<String, dynamic> json) {
@@ -171,7 +172,6 @@ class SingletonData extends TypeRegistration {
     final json = super.toJson();
     json.addAll({
       'type': 'singleton',
-      'dependencies': dependencies,
       'factoryMethodName': factoryMethodName,
       'namedArgs': namedArgs,
     });
@@ -185,14 +185,13 @@ class SingletonData extends TypeRegistration {
 }
 
 class TransientData extends TypeRegistration {
-  final List<String> dependencies;
   final String? factoryMethodName;
   final Map<String, String> namedArgs;
 
   TransientData({
     required super.importPath,
     required super.className,
-    required this.dependencies,
+    required super.dependencies,
     required this.factoryMethodName,
     required this.namedArgs,
     super.interfaces,
@@ -206,7 +205,6 @@ class TransientData extends TypeRegistration {
     final json = super.toJson();
     json.addAll({
       'type': 'transient',
-      'dependencies': dependencies,
       'factoryMethod': factoryMethodName,
       'namedArgs': namedArgs,
     });
@@ -239,18 +237,17 @@ class TransientData extends TypeRegistration {
 }
 
 class LazyData extends TypeRegistration {
-  final List<String> dependencies;
   final String returnType;
 
   LazyData({
     required super.importPath,
     required super.className,
     required this.returnType,
-    this.dependencies = const [],
-    super.interfaces,
-    super.name,
-    super.key,
-    super.environment,
+    required super.dependencies,
+    required super.interfaces,
+    required super.name,
+    required super.key,
+    required super.environment,
   });
 
   @override
@@ -258,7 +255,6 @@ class LazyData extends TypeRegistration {
     final json = super.toJson();
     json.addAll({
       'type': 'lazy',
-      'dependencies': dependencies,
       'returnType': returnType,
     });
     return json;

@@ -42,17 +42,30 @@ class RegistrationDataCollector {
     // Get the factory method name, if any
     String? factoryMethodName = _findAnnotatedFactoryMethodName(element);
 
-    List<String> constructorParams = [];
-    Map<String, String> namedArgs = {};
+    final constructorParams =
+        ConstructorProcessor.getConstructorParams(element);
 
     if (factoryMethodName != null) {
       // Factory method is present, collect named arguments from it
       MethodElement factoryMethod = element.getMethod(factoryMethodName)!;
-      namedArgs = MethodProcessor.getNamedParameters(factoryMethod);
+      final namedArgs = MethodProcessor.getNamedParameters(factoryMethod);
+
+      if (namedArgs.isNotEmpty) {
+        throw InvalidGenerationSourceError(
+          'Named arguments are not supported for factory methods in Singleton classes',
+          element: element,
+        );
+      }
     } else {
       // No factory method, collect named arguments from the constructor
-      constructorParams = ConstructorProcessor.getConstructorParams(element);
-      namedArgs = ConstructorProcessor.getNamedParameters(element);
+      final namedArgs = ConstructorProcessor.getNamedParameters(element);
+
+      if (namedArgs.isNotEmpty) {
+        throw InvalidGenerationSourceError(
+          'Named arguments are not supported for constructors in Singleton classes',
+          element: element,
+        );
+      }
     }
 
     // Get the annotation attributes
@@ -68,7 +81,7 @@ class RegistrationDataCollector {
       className: element.name,
       factoryMethodName: factoryMethodName,
       dependencies: constructorParams,
-      namedArgs: namedArgs,
+      namedArgs: {},
       interfaces: superClasses.toList(),
       name: attributes.name,
       key: attributes.key,
@@ -93,16 +106,17 @@ class RegistrationDataCollector {
     // Get the factory method name, if any
     String? factoryMethodName = _findAnnotatedFactoryMethodName(element);
 
-    List<String> constructorParams = [];
+    List<String> unnamedParams = [];
     Map<String, String> namedArgs = {};
 
     if (factoryMethodName != null) {
-      // Factory method is present, collect named arguments from it
+      // Factory method is present, collect named and unnamed arguments from it
       MethodElement factoryMethod = element.getMethod(factoryMethodName)!;
+      unnamedParams = MethodProcessor.getUnnamedParameters(factoryMethod);
       namedArgs = MethodProcessor.getNamedParameters(factoryMethod);
     } else {
       // No factory method, collect named arguments from the constructor
-      constructorParams = ConstructorProcessor.getConstructorParams(element);
+      unnamedParams = ConstructorProcessor.getConstructorParams(element);
       namedArgs = ConstructorProcessor.getNamedParameters(element);
     }
 
@@ -110,7 +124,7 @@ class RegistrationDataCollector {
       interfaces: superClasses.toList(),
       importPath: importPath,
       className: element.name,
-      dependencies: constructorParams,
+      dependencies: unnamedParams,
       factoryMethodName: factoryMethodName,
       namedArgs: namedArgs,
       name: attributes.name,

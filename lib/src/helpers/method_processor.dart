@@ -7,4 +7,15 @@ class MethodProcessor {
         .map((param) => MapEntry(
             param.name, param.type.getDisplayString(withNullability: false))));
   }
+
+  static List<String> getUnnamedParameters(ExecutableElement method) {
+    final unnamedParams = method.parameters
+        .where((param) => !param.isNamed)
+        .map((param) => param.type.getDisplayString(withNullability: false))
+        .toList();
+
+    print('Unnamed method params: $unnamedParams');
+
+    return unnamedParams;
+  }
 }

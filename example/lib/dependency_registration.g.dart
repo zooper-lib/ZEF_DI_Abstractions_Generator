@@ -3,47 +3,158 @@
 
 // ignore_for_file: implementation_imports, depend_on_referenced_packages, unused_import
 
-import 'package:example/test_files/services.dart';
+import 'package:example/test_files/singleton_services.dart';
+import 'package:example/test_files/module_services.dart';
+import 'package:example/test_files/transient_services.dart';
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 import 'package:zef_helpers_lazy/zef_helpers_lazy.dart';
 
 void registerDependencies() {
-  ServiceLocator.I.registerInstance<ServiceA>(
-    ServiceA(),
-    interfaces: {AbstractService},
-    name: 'foobla',
+  ServiceLocator.I.registerSingleton<SingletonNoDependencies>(
+    SingletonNoDependencies(),
+    interfaces: {SingletonService},
+    name: null,
     key: null,
     environment: null,
   );
 
-  ServiceLocator.I.registerLazy<ServiceB>(
-    Lazy<ServiceB>(
-      factory: () => ServiceB(
-        ServiceLocator.I.resolve(),
-      ),
+  ServiceLocator.I.registerSingletonFactory<SingletonWithFactoryNoDependencies>(
+    (serviceLocator) => SingletonWithFactoryNoDependencies.create(),
+    interfaces: {SingletonService},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerSingleton<SingletonWithDependencies>(
+    SingletonWithDependencies(
+      ServiceLocator.I.resolve<SingletonNoDependencies>(),
     ),
-    interfaces: {AbstractService},
-    name: 'ServiceB',
+    interfaces: {SingletonService},
+    name: null,
     key: null,
     environment: null,
   );
 
-  ServiceLocator.I.registerFactory<ServiceC>(
-    (serviceLocator, namedArgs) => ServiceC(
-        serviceLocator.resolve(namedArgs: namedArgs),
-        serviceLocator.resolve(namedArgs: namedArgs),
+  ServiceLocator.I
+      .registerSingletonFactory<SingletonWithFactoryWithDependencies>(
+    (serviceLocator) => SingletonWithFactoryWithDependencies.create(
+      ServiceLocator.I.resolve<SingletonNoDependencies>(),
+    ),
+    interfaces: {SingletonService},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerSingleton<ModuleNoDependencies>(
+    ModuleNoDependencies(),
+    interfaces: {SingletonService},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerSingletonFactory<ModuleWithFactory>(
+    (serviceLocator) => ModuleWithFactory.create(),
+    interfaces: null,
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerTransient<TransientNoDependencies>(
+    (serviceLocator, namedArgs) => TransientNoDependencies(),
+    interfaces: {TransientService},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerTransient<TransientWithFactoryNoDependencies>(
+    (serviceLocator, namedArgs) => TransientWithFactoryNoDependencies.create(),
+    interfaces: {TransientService},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerTransient<TransientWithDependencies>(
+    (serviceLocator, namedArgs) =>
+        TransientWithDependencies(serviceLocator.resolve(namedArgs: namedArgs)),
+    interfaces: {TransientService},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerTransient<TransientWithFactoryWithDependencies>(
+    (serviceLocator, namedArgs) => TransientWithFactoryWithDependencies.create(
         serviceLocator.resolve(namedArgs: namedArgs)),
-    interfaces: {AbstractService},
-    name: 'blafoo',
+    interfaces: {TransientService},
+    name: null,
     key: null,
-    environment: 'test',
+    environment: null,
   );
 
-  ServiceLocator.I.registerFactory<ServiceD>(
-    (serviceLocator, namedArgs) => ServiceD.create(
-      anyDouble: namedArgs['anyDouble'] as double,
+  ServiceLocator.I.registerTransient<TransientWithNamedArgs>(
+    (serviceLocator, namedArgs) => TransientWithNamedArgs(
+      someValue: namedArgs['someValue'] as double,
     ),
-    interfaces: {AbstractService},
+    interfaces: {TransientService},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerTransient<TransientWithFactoryWithNamedArgs>(
+    (serviceLocator, namedArgs) => TransientWithFactoryWithNamedArgs.create(
+      someValue: namedArgs['someValue'] as double,
+    ),
+    interfaces: {TransientService},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerTransient<TransientWithDependencyWithNamedArgs>(
+    (serviceLocator, namedArgs) => TransientWithDependencyWithNamedArgs(
+      serviceLocator.resolve(namedArgs: namedArgs),
+      someValue: namedArgs['someValue'] as double,
+    ),
+    interfaces: {TransientService},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I
+      .registerTransient<TransientWithFactoryWithDependencyWithNamedArgs>(
+    (serviceLocator, namedArgs) =>
+        TransientWithFactoryWithDependencyWithNamedArgs.create(
+      serviceLocator.resolve(namedArgs: namedArgs),
+      someValue: namedArgs['someValue'] as double,
+    ),
+    interfaces: {TransientService},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerTransient<ModuleWithNamedArgs>(
+    (serviceLocator, namedArgs) => ModuleWithNamedArgs(
+      someValue: namedArgs['someValue'] as double,
+    ),
+    interfaces: null,
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerTransient<ModuleWithDependency>(
+    (serviceLocator, namedArgs) =>
+        ModuleWithDependency(serviceLocator.resolve(namedArgs: namedArgs)),
+    interfaces: null,
     name: null,
     key: null,
     environment: null,

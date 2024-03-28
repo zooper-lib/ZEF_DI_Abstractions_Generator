@@ -1,34 +1,125 @@
 import '../models/registrations.dart';
 
 class CodeGenerationHelper {
-  static String generateInstanceRegistration(SingletonData instance) {
-    final dependencies =
-        instance.dependencies.map((d) => "ServiceLocator.I.resolve(),").join();
-
-    final interfaces = instance.interfaces.isNotEmpty
-        ? "interfaces: {${instance.interfaces.map((i) => i.className).join(', ')}}"
-        : "interfaces: null";
-
-    final name =
-        instance.name != null ? "name: '${instance.name}'" : 'name: null';
-
-    final key = instance.key != null ? "key: ${instance.key}" : 'key: null';
-
-    final environment = instance.environment != null
-        ? "environment: '${instance.environment}'"
-        : 'environment: null';
-
-    return '''
-        ServiceLocator.I.registerInstance<${instance.className}>(${instance.className}(
-          ${dependencies.isNotEmpty ? dependencies : ''}),
-          $interfaces,
-          $name,
-          $key,
-          $environment,
-        );''';
+  static String generateSingletonRegistration(SingletonData instance) {
+    // Check if a factory method is provided for singleton creation
+    if (instance.factoryMethodName != null &&
+        instance.factoryMethodName!.isNotEmpty) {
+      return generateSingletonRegistrationWithFunction(instance);
+    } else {
+      return generateSingletonRegistrationWithInstance(instance);
+    }
   }
 
-  static String generateFactoryRegistration(TransientData factory) {
+  static String generateSingletonRegistrationWithInstance(
+      SingletonData instance) {
+    String instanceCreation;
+
+    // Instantiate the class directly, potentially with resolved dependencies
+    String dependenciesResolution = _getDependencies(instance);
+
+    instanceCreation = '${instance.className}($dependenciesResolution)';
+
+    // Format additional registration parameters
+    final interfaces = _getInterfaces(instance);
+    final name = _getName(instance);
+    final key = _getKey(instance);
+    final environment = _getEnvironment(instance);
+
+    // Construct the registration code for the singleton
+    return '''
+    ServiceLocator.I.registerSingleton<${instance.className}>(
+        $instanceCreation,
+        $interfaces,
+        $name,
+        $key,
+        $environment,
+    );
+    ''';
+  }
+
+  static String generateSingletonRegistrationWithFunction(
+      SingletonData instance) {
+    // Ensure a factory method name is provided
+    if (instance.factoryMethodName == null ||
+        instance.factoryMethodName!.isEmpty) {
+      throw Exception(
+          'Factory method name must be provided for singleton function registration.');
+    }
+
+    // Resolve dependencies for the factory method
+    final dependencies = _getDependencies(instance);
+
+    // Resolve named arguments for the factory method
+    final namedArgs = _getNamedArgs(instance);
+
+    // Construct the function call to the factory method with resolved dependencies and named arguments
+    String functionCall =
+        '${instance.className}.${instance.factoryMethodName!}($dependencies${namedArgs.isNotEmpty ? ', ' : ''}$namedArgs)';
+
+    // Format additional registration parameters
+    final interfaces = _getInterfaces(instance);
+    final name = _getName(instance);
+    final key = _getKey(instance);
+    final environment = _getEnvironment(instance);
+
+    // Construct the registration code using a factory function
+    return '''
+    ServiceLocator.I.registerSingletonFactory<${instance.className}>(
+        (serviceLocator) => $functionCall,
+        $interfaces,
+        $name,
+        $key,
+        $environment,
+    );
+    ''';
+  }
+
+  static String _getDependencies(TypeRegistration typeRegistration) {
+    return typeRegistration.dependencies
+        .map((dep) => "ServiceLocator.I.resolve<$dep>(),")
+        .join();
+  }
+
+  static String _getNamedArgs(TypeRegistration typeRegistration) {
+    if (typeRegistration is SingletonData) {
+      return typeRegistration.namedArgs.entries
+          .map((e) => "${e.key}: namedArgs['${e.key}'],")
+          .join();
+    } else if (typeRegistration is TransientData) {
+      return typeRegistration.namedArgs.entries
+          .map((e) => "${e.key}: namedArgs['${e.key}'] as ${e.value},")
+          .join();
+    } else {
+      throw Exception('Unknown type registration');
+    }
+  }
+
+  static String _getInterfaces(TypeRegistration typeRegistration) {
+    return typeRegistration.interfaces.isNotEmpty
+        ? "interfaces: {${typeRegistration.interfaces.map((i) => i.className).join(', ')}}"
+        : "interfaces: null";
+  }
+
+  static String _getName(TypeRegistration typeRegistration) {
+    return typeRegistration.name != null
+        ? "name: '${typeRegistration.name}'"
+        : 'name: null';
+  }
+
+  static String _getKey(TypeRegistration typeRegistration) {
+    return typeRegistration.key != null
+        ? "key: ${typeRegistration.key}"
+        : 'key: null';
+  }
+
+  static String _getEnvironment(TypeRegistration typeRegistration) {
+    return typeRegistration.environment != null
+        ? "environment: '${typeRegistration.environment}'"
+        : 'environment: null';
+  }
+
+  static String generateTransientRegistration(TransientData factory) {
     final interfaces = factory.interfaces.isNotEmpty
         ? "interfaces: {${factory.interfaces.map((i) => i.className).join(', ')}}"
         : "interfaces: null";
@@ -61,7 +152,7 @@ class CodeGenerationHelper {
         factory.factoryMethodName!.isNotEmpty) {
       // If a factory method is specified, use it in the registration code
       return '''
-          ServiceLocator.I.registerFactory<${factory.className}>(
+          ServiceLocator.I.registerTransient<${factory.className}>(
             (serviceLocator, namedArgs) => ${factory.className}.${factory.factoryMethodName}(
               $allArgs),
               $interfaces,
@@ -74,7 +165,7 @@ class CodeGenerationHelper {
     } else {
       // If no factory method is specified, use the constructor with resolved dependencies and named arguments
       return '''
-          ServiceLocator.I.registerFactory<${factory.className}>(
+          ServiceLocator.I.registerTransient<${factory.className}>(
             (serviceLocator, namedArgs) => ${factory.className}(
               $allArgs),
               $interfaces,

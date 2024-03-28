@@ -1,25 +1,29 @@
 import 'package:example/test_files/module_services.dart';
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 
-//@DependencyModule()
+@DependencyModule()
 abstract class TestModule {
-  @RegisterSingleton(environment: 'test2')
-  ModuleServiceA get moduleServiceA;
+  @RegisterSingleton()
+  ModuleNoDependencies get moduleNoDependencies;
 
   @RegisterTransient()
-  ModuleServiceB moduleServiceB(ModuleServiceA moduleServiceA) =>
-      ModuleServiceB(moduleServiceA);
+  ModuleWithDependency moduleWithDependency(
+          ModuleNoDependencies moduleServiceA) =>
+      ModuleWithDependency(moduleServiceA);
 
-  @RegisterLazy(name: 'TestLazy')
-  ModuleServiceC moduleServiceC(
-    ModuleServiceA moduleServiceA,
-    ModuleServiceB moduleServiceB,
+  @RegisterSingleton()
+  ModuleWithFactory get moduleServiceC;
+
+  @RegisterLazy()
+  ModuleWithFactoryWithDependencies moduleWithFactoryWithDependencies(
+    ModuleNoDependencies moduleServiceA,
+    ModuleWithDependency moduleServiceB,
   ) =>
-      ModuleServiceC.create(
+      ModuleWithFactoryWithDependencies.create(
         moduleServiceA,
         moduleServiceB,
       );
 
   @RegisterTransient()
-  ModuleServiceD get moduleServiceD;
+  ModuleWithNamedArgs get moduleServiceD;
 }

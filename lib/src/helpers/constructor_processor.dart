@@ -20,10 +20,16 @@ class ConstructorProcessor {
     // Get the Constructor
     final ConstructorElement constructor = getConstructor(element);
 
-    // Use null-aware operators to handle the case where the constructor might be null
     return constructor.parameters
         .where((param) => !param.isNamed) // exclude named parameters
         .map((param) => param.type.getDisplayString(withNullability: false))
-        .toList(); // Provide an empty list as a fallback if 'constructor' is null
+        .toList();
+  }
+
+  static String? getConstructorName(ClassElement element) {
+    // Get the Constructor
+    final ConstructorElement constructor = getConstructor(element);
+
+    return constructor.name == '' ? null : constructor.name;
   }
 }
