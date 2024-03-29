@@ -47,9 +47,7 @@ class ImportPathResolver {
   static Set<ImportPath> getImportPaths(RegistrationData registration) {
     final Set<ImportPath> paths = {};
 
-    if (registration is ModuleRegistration) {
-      paths.addAll(registration.importPaths);
-    } else if (registration is TypeRegistration) {
+    if (registration is TypeRegistration) {
       paths.add(registration.importPath);
     }
 

@@ -5,13 +5,8 @@ environment:
   sdk: ^3.0.5
 
 dependencies:
-  #zef_di_abstractions: ^2.0.0
-  zef_di_abstractions:
-    path: ../../ZEF_DI_Abstractions
-
-  #zef_di_inglue: ^1.1.1
-  zef_di_inglue:
-    path: ../../ZEF_DI_Inglue
+  zef_di_abstractions: ^3.0.0
+  zef_di_inglue: ^2.0.0
 
   zef_helpers_lazy: ^1.0.0
 

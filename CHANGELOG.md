@@ -1,3 +1,8 @@
+## 2.0.0
+
+- Adapted to the renaming of the package `zef_di_abstractions`
+- Made a lot of improvements to the code generation
+
 ## 1.2.3
 
 - Excluded private classes from being added as interfaces

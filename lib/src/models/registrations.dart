@@ -16,18 +16,15 @@ abstract class RegistrationData {
 
 class ModuleRegistration extends RegistrationData {
   final List<TypeRegistration> registrations;
-  final Set<ImportPath> importPaths;
 
   ModuleRegistration({
     required this.registrations,
-    required this.importPaths,
   });
 
   @override
   Map<String, dynamic> toJson() {
     return {
       'registrations': registrations.map((e) => e.toJson()).toList(),
-      'importPaths': importPaths.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -37,19 +34,14 @@ class ModuleRegistration extends RegistrationData {
             .map((e) => TypeRegistration.fromJson(e as Map<String, dynamic>))
             .toList();
 
-    Set<ImportPath> importPaths = (json['importPaths'] as List<dynamic>? ?? [])
-        .map((e) => ImportPath.fromJson(e as Map<String, dynamic>))
-        .toSet();
-
     return ModuleRegistration(
       registrations: registrations,
-      importPaths: importPaths,
     );
   }
 
   @override
   String toString() {
-    return 'ModuleRegistration{registrations: $registrations, importPaths: $importPaths}';
+    return 'ModuleRegistration{registrations: $registrations}';
   }
 }
 

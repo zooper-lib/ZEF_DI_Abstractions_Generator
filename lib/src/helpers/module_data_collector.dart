@@ -16,7 +16,6 @@ class ModuleDataCollector {
   static ModuleRegistration? collect(
       ClassElement element, BuildStep buildStep) {
     final List<TypeRegistration> registrations = [];
-    final Set<ImportPath> importPaths = {};
 
     if (AnnotationProcessor.isDependencyModule(element) == false) {
       return null;
@@ -42,10 +41,6 @@ class ModuleDataCollector {
 
       // Add the registration to the list
       registrations.add(registration);
-
-      // TODO: Check if this is still used
-      importPaths.add(ImportPathResolver.determineImportPathForClass(
-          accessor.returnType.element as ClassElement, buildStep));
     }
 
     for (var method in element.methods.where((method) => !method.isAbstract)) {
@@ -67,21 +62,10 @@ class ModuleDataCollector {
 
       // Add the registration to the list
       registrations.add(registration);
-
-      // TODO: Check if this is still used
-      importPaths.add(ImportPathResolver.determineImportPathForClass(
-          method.returnType.element as ClassElement, buildStep));
-      for (var param in method.parameters) {
-        if (param.type.element is ClassElement) {
-          importPaths.add(ImportPathResolver.determineImportPathForClass(
-              param.type.element as ClassElement, buildStep));
-        }
-      }
     }
 
     return ModuleRegistration(
       registrations: registrations,
-      importPaths: importPaths,
     );
   }
 
