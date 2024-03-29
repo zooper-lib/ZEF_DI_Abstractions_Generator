@@ -15,15 +15,15 @@ class SingletonNoDependencies implements SingletonService {
 }
 
 @RegisterSingleton()
-class SingletonWithFactoryNoDependencies implements SingletonService {
+class SingletonWithFactory implements SingletonService {
   @RegisterFactoryMethod()
-  static SingletonWithFactoryNoDependencies create() {
-    return SingletonWithFactoryNoDependencies();
+  static SingletonWithFactory create() {
+    return SingletonWithFactory();
   }
 
   @override
   void doSomething() {
-    print('$SingletonWithFactoryNoDependencies.doSomething');
+    print('$SingletonWithFactory.doSomething');
   }
 }
 

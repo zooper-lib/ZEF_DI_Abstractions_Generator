@@ -5,6 +5,7 @@
 
 import 'package:example/test_files/singleton_services.dart';
 import 'package:example/test_files/module_services.dart';
+import 'package:example/test_files/lazy_services.dart';
 import 'package:example/test_files/transient_services.dart';
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 import 'package:zef_helpers_lazy/zef_helpers_lazy.dart';
@@ -18,8 +19,8 @@ void registerDependencies() {
     environment: null,
   );
 
-  ServiceLocator.I.registerSingletonFactory<SingletonWithFactoryNoDependencies>(
-    (serviceLocator) => SingletonWithFactoryNoDependencies.create(),
+  ServiceLocator.I.registerSingletonFactory<SingletonWithFactory>(
+    (serviceLocator) => SingletonWithFactory.create(),
     interfaces: {SingletonService},
     name: null,
     key: null,
@@ -63,6 +64,46 @@ void registerDependencies() {
     environment: null,
   );
 
+  ServiceLocator.I.registerLazy<LazyNoDependencies>(
+    Lazy<LazyNoDependencies>(
+      factory: () => LazyNoDependencies(),
+    ),
+    interfaces: {LazyServices},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerLazy<LazyWithFactoryNoDependencies>(
+    Lazy<LazyWithFactoryNoDependencies>(
+        factory: () => LazyWithFactoryNoDependencies.create()),
+    interfaces: {LazyServices},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerLazy<LazyWithDependencies>(
+    Lazy<LazyWithDependencies>(
+      factory: () => LazyWithDependencies(
+        ServiceLocator.I.resolve<LazyNoDependencies>(),
+      ),
+    ),
+    interfaces: {LazyServices},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerLazy<LazyWithFactoryWithDependencies>(
+    Lazy<LazyWithFactoryWithDependencies>(
+        factory: () => LazyWithFactoryWithDependencies.create()),
+    interfaces: {LazyServices},
+    name: null,
+    key: null,
+    environment: null,
+  );
+
   ServiceLocator.I.registerTransient<TransientNoDependencies>(
     (serviceLocator, namedArgs) => TransientNoDependencies(),
     interfaces: {TransientService},
@@ -71,8 +112,8 @@ void registerDependencies() {
     environment: null,
   );
 
-  ServiceLocator.I.registerTransient<TransientWithFactoryNoDependencies>(
-    (serviceLocator, namedArgs) => TransientWithFactoryNoDependencies.create(),
+  ServiceLocator.I.registerTransient<TransientWithFactory>(
+    (serviceLocator, namedArgs) => TransientWithFactory.create(),
     interfaces: {TransientService},
     name: null,
     key: null,
@@ -154,6 +195,18 @@ void registerDependencies() {
   ServiceLocator.I.registerTransient<ModuleWithDependency>(
     (serviceLocator, namedArgs) =>
         ModuleWithDependency(serviceLocator.resolve(namedArgs: namedArgs)),
+    interfaces: null,
+    name: null,
+    key: null,
+    environment: null,
+  );
+
+  ServiceLocator.I.registerLazy<ModuleWithFactoryWithDependencies>(
+    Lazy<ModuleWithFactoryWithDependencies>(
+        factory: () => ModuleWithFactoryWithDependencies.create(
+              ServiceLocator.I.resolve<ModuleNoDependencies>(),
+              ServiceLocator.I.resolve<ModuleWithDependency>(),
+            )),
     interfaces: null,
     name: null,
     key: null,

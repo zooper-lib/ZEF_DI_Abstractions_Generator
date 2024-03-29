@@ -75,50 +75,6 @@ class CodeGenerationHelper {
     ''';
   }
 
-  static String _getDependencies(TypeRegistration typeRegistration) {
-    return typeRegistration.dependencies
-        .map((dep) => "ServiceLocator.I.resolve<$dep>(),")
-        .join();
-  }
-
-  static String _getNamedArgs(TypeRegistration typeRegistration) {
-    if (typeRegistration is SingletonData) {
-      return typeRegistration.namedArgs.entries
-          .map((e) => "${e.key}: namedArgs['${e.key}'],")
-          .join();
-    } else if (typeRegistration is TransientData) {
-      return typeRegistration.namedArgs.entries
-          .map((e) => "${e.key}: namedArgs['${e.key}'] as ${e.value},")
-          .join();
-    } else {
-      throw Exception('Unknown type registration');
-    }
-  }
-
-  static String _getInterfaces(TypeRegistration typeRegistration) {
-    return typeRegistration.interfaces.isNotEmpty
-        ? "interfaces: {${typeRegistration.interfaces.map((i) => i.className).join(', ')}}"
-        : "interfaces: null";
-  }
-
-  static String _getName(TypeRegistration typeRegistration) {
-    return typeRegistration.name != null
-        ? "name: '${typeRegistration.name}'"
-        : 'name: null';
-  }
-
-  static String _getKey(TypeRegistration typeRegistration) {
-    return typeRegistration.key != null
-        ? "key: ${typeRegistration.key}"
-        : 'key: null';
-  }
-
-  static String _getEnvironment(TypeRegistration typeRegistration) {
-    return typeRegistration.environment != null
-        ? "environment: '${typeRegistration.environment}'"
-        : 'environment: null';
-  }
-
   static String generateTransientRegistration(TransientData factory) {
     final interfaces = factory.interfaces.isNotEmpty
         ? "interfaces: {${factory.interfaces.map((i) => i.className).join(', ')}}"
@@ -180,21 +136,30 @@ class CodeGenerationHelper {
 
   static String generateLazyRegistration(LazyData lazyData) {
     // Resolve dependencies for the constructor parameters
-    final dependencies =
-        lazyData.dependencies.map((d) => "ServiceLocator.I.resolve(), ").join();
+    final dependencies = _getDependencies(lazyData);
 
-    final interfaces = lazyData.interfaces.isNotEmpty
-        ? "interfaces: {${lazyData.interfaces.map((i) => i.className).join(', ')}}"
-        : "interfaces: null";
+    final interfaces = _getInterfaces(lazyData);
+    final name = _getName(lazyData);
+    final key = _getKey(lazyData);
+    final environment = _getEnvironment(lazyData);
 
-    final name =
-        lazyData.name != null ? "name: '${lazyData.name}'" : 'name: null';
-    final key = lazyData.key != null ? "key: ${lazyData.key}" : 'key: null';
-    final environment = lazyData.environment != null
-        ? "environment: '${lazyData.environment}'"
-        : 'environment: null';
+    if (lazyData.factoryMethodName != null &&
+        lazyData.factoryMethodName!.isNotEmpty) {
+      // Construct the function call to the factory method with resolved dependencies and named arguments
+      String functionCall =
+          '${lazyData.className}.${lazyData.factoryMethodName!}($dependencies)';
 
-    return '''
+      return '''
+    ServiceLocator.I.registerLazy<${lazyData.className}>(
+        Lazy<${lazyData.className}>(factory: () => $functionCall),
+        $interfaces,
+        $name,
+        $key,
+        $environment,
+    );
+    ''';
+    } else {
+      return '''
         ServiceLocator.I.registerLazy<${lazyData.className}>(
           Lazy<${lazyData.className}>(factory: () => ${lazyData.className}(${dependencies.isNotEmpty ? dependencies : ''}),),
           $interfaces,
@@ -202,5 +167,50 @@ class CodeGenerationHelper {
           $key,
           $environment,
         );''';
+    }
+  }
+
+  static String _getDependencies(TypeRegistration typeRegistration) {
+    return typeRegistration.dependencies
+        .map((dep) => "ServiceLocator.I.resolve<$dep>(),")
+        .join();
+  }
+
+  static String _getNamedArgs(TypeRegistration typeRegistration) {
+    if (typeRegistration is SingletonData) {
+      return typeRegistration.namedArgs.entries
+          .map((e) => "${e.key}: namedArgs['${e.key}'],")
+          .join();
+    } else if (typeRegistration is TransientData) {
+      return typeRegistration.namedArgs.entries
+          .map((e) => "${e.key}: namedArgs['${e.key}'] as ${e.value},")
+          .join();
+    } else {
+      throw Exception('Unknown type registration');
+    }
+  }
+
+  static String _getInterfaces(TypeRegistration typeRegistration) {
+    return typeRegistration.interfaces.isNotEmpty
+        ? "interfaces: {${typeRegistration.interfaces.map((i) => i.className).join(', ')}}"
+        : "interfaces: null";
+  }
+
+  static String _getName(TypeRegistration typeRegistration) {
+    return typeRegistration.name != null
+        ? "name: '${typeRegistration.name}'"
+        : 'name: null';
+  }
+
+  static String _getKey(TypeRegistration typeRegistration) {
+    return typeRegistration.key != null
+        ? "key: ${typeRegistration.key}"
+        : 'key: null';
+  }
+
+  static String _getEnvironment(TypeRegistration typeRegistration) {
+    return typeRegistration.environment != null
+        ? "environment: '${typeRegistration.environment}'"
+        : 'environment: null';
   }
 }

@@ -15,15 +15,15 @@ class TransientNoDependencies implements TransientService {
 }
 
 @RegisterTransient()
-class TransientWithFactoryNoDependencies implements TransientService {
+class TransientWithFactory implements TransientService {
   @RegisterFactoryMethod()
-  static TransientWithFactoryNoDependencies create() {
-    return TransientWithFactoryNoDependencies();
+  static TransientWithFactory create() {
+    return TransientWithFactory();
   }
 
   @override
   void doSomething() {
-    print('$TransientWithFactoryNoDependencies.doSomething');
+    print('$TransientWithFactory.doSomething');
   }
 }
 

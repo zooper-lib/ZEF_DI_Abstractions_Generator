@@ -6,30 +6,25 @@ class ConstructorProcessor {
     return element.unnamedConstructor ?? element.constructors.first;
   }
 
-  static Map<String, String> getNamedParameters(ClassElement element) {
-    // Get the constructor
-    final constructor = getConstructor(element);
-
-    return Map.fromEntries(constructor.parameters
-        .where((param) => param.isNamed)
-        .map((param) => MapEntry(
-            param.name, param.type.getDisplayString(withNullability: false))));
+  static String getConstructorName(ConstructorElement constructor) {
+    return constructor.name;
   }
 
-  static List<String> getConstructorParams(ClassElement element) {
-    // Get the Constructor
-    final ConstructorElement constructor = getConstructor(element);
+  static String? getConstructorNameOrNull(ConstructorElement? constructor) {
+    return constructor?.name;
+  }
 
+  static List<String> getUnnamedParams(ConstructorElement constructor) {
     return constructor.parameters
-        .where((param) => !param.isNamed) // exclude named parameters
+        .where((param) => !param.isNamed)
         .map((param) => param.type.getDisplayString(withNullability: false))
         .toList();
   }
 
-  static String? getConstructorName(ClassElement element) {
-    // Get the Constructor
-    final ConstructorElement constructor = getConstructor(element);
-
-    return constructor.name == '' ? null : constructor.name;
+  static Map<String, String> getNamedParams(ConstructorElement constructor) {
+    return Map.fromEntries(constructor.parameters
+        .where((param) => param.isNamed)
+        .map((param) => MapEntry(
+            param.name, param.type.getDisplayString(withNullability: false))));
   }
 }

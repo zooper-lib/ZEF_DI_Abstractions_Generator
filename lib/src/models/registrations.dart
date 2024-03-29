@@ -238,11 +238,13 @@ class TransientData extends TypeRegistration {
 
 class LazyData extends TypeRegistration {
   final String returnType;
+  final String? factoryMethodName;
 
   LazyData({
     required super.importPath,
     required super.className,
     required this.returnType,
+    required this.factoryMethodName,
     required super.dependencies,
     required super.interfaces,
     required super.name,
@@ -256,6 +258,7 @@ class LazyData extends TypeRegistration {
     json.addAll({
       'type': 'lazy',
       'returnType': returnType,
+      'factoryMethod': factoryMethodName,
     });
     return json;
   }
@@ -270,6 +273,7 @@ class LazyData extends TypeRegistration {
       importPath: ImportPath.fromJson(json['importPath']),
       className: json['className'],
       returnType: json['returnType'] as String,
+      factoryMethodName: json['factoryMethod'],
       dependencies: List<String>.from(json['dependencies']),
       interfaces: interfaces,
       name: json['name'],
@@ -280,6 +284,6 @@ class LazyData extends TypeRegistration {
 
   @override
   String toString() {
-    return 'LazyData{importPath: $importPath, className: $className, returnType: $returnType, dependencies: $dependencies, interfaces: $interfaces, name: $name, key: $key, environment: $environment}';
+    return 'LazyData{importPath: $importPath, className: $className, returnType: $returnType, factoryMethodName: $factoryMethodName, dependencies: $dependencies, interfaces: $interfaces, name: $name, key: $key, environment: $environment}';
   }
 }
