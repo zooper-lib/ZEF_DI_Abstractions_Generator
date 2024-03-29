@@ -16,18 +16,15 @@ abstract class RegistrationData {
 
 class ModuleRegistration extends RegistrationData {
   final List<TypeRegistration> registrations;
-  final Set<ImportPath> importPaths;
 
   ModuleRegistration({
     required this.registrations,
-    required this.importPaths,
   });
 
   @override
   Map<String, dynamic> toJson() {
     return {
       'registrations': registrations.map((e) => e.toJson()).toList(),
-      'importPaths': importPaths.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -37,25 +34,21 @@ class ModuleRegistration extends RegistrationData {
             .map((e) => TypeRegistration.fromJson(e as Map<String, dynamic>))
             .toList();
 
-    Set<ImportPath> importPaths = (json['importPaths'] as List<dynamic>? ?? [])
-        .map((e) => ImportPath.fromJson(e as Map<String, dynamic>))
-        .toSet();
-
     return ModuleRegistration(
       registrations: registrations,
-      importPaths: importPaths,
     );
   }
 
   @override
   String toString() {
-    return 'ModuleRegistration{registrations: $registrations, importPaths: $importPaths}';
+    return 'ModuleRegistration{registrations: $registrations}';
   }
 }
 
 abstract class TypeRegistration extends RegistrationData {
   final ImportPath importPath;
   final String className;
+  final List<String> dependencies;
   final List<SuperTypeData> interfaces;
   final String? name;
   final dynamic key;
@@ -64,6 +57,7 @@ abstract class TypeRegistration extends RegistrationData {
   TypeRegistration({
     required this.importPath,
     required this.className,
+    required this.dependencies,
     this.interfaces = const [],
     this.name,
     this.key,
@@ -75,6 +69,7 @@ abstract class TypeRegistration extends RegistrationData {
     return {
       'importPath': importPath.toJson(),
       'className': className,
+      'dependencies': dependencies,
       'interfaces': interfaces,
       'name': name,
       'key': key,
@@ -83,16 +78,21 @@ abstract class TypeRegistration extends RegistrationData {
   }
 
   factory TypeRegistration.fromJson(Map<String, dynamic> json) {
-    if (json.containsKey('factoryMethod')) {
-      return FactoryData.fromJson(json);
-    } else if (json.containsKey('returnType')) {
-      return LazyData.fromJson(json);
-    } else {
-      return InstanceData.fromJson(json);
+    final String type = json['type'];
+
+    switch (type) {
+      case 'singleton':
+        return SingletonData.fromJson(json);
+      case 'transient':
+        return TransientData.fromJson(json);
+      case 'lazy':
+        return LazyData.fromJson(json);
+      default:
+        throw ArgumentError('Unknown TypeRegistration type: $type');
     }
   }
 
-  bool isInstance() => this is InstanceData;
+  bool isInstance() => this is SingletonData;
 }
 
 class SuperTypeData {
@@ -124,60 +124,68 @@ class SuperTypeData {
   }
 }
 
-class InstanceData extends TypeRegistration {
-  final List<String> dependencies;
+class SingletonData extends TypeRegistration {
+  final String? factoryMethodName;
+  final Map<String, String> namedArgs;
 
-  InstanceData({
+  SingletonData({
     required super.importPath,
     required super.className,
-    this.dependencies = const [],
-    super.interfaces,
-    super.name,
-    super.key,
-    super.environment,
+    required super.dependencies,
+    required this.factoryMethodName,
+    required this.namedArgs,
+    required super.interfaces,
+    required super.name,
+    required super.key,
+    required super.environment,
   });
 
-  @override
-  Map<String, dynamic> toJson() {
-    final json = super.toJson();
-    json.addAll({'dependencies': dependencies});
-    return json;
-  }
-
-  factory InstanceData.fromJson(Map<String, dynamic> json) {
+  factory SingletonData.fromJson(Map<String, dynamic> json) {
     List<SuperTypeData> interfaces =
         (json['interfaces'] as List<dynamic>? ?? [])
             .map((e) => SuperTypeData.fromJson(e as Map<String, dynamic>))
             .toList();
 
-    return InstanceData(
+    return SingletonData(
       importPath: ImportPath.fromJson(json['importPath']),
       className: json['className'],
-      dependencies: List<String>.from(json['dependencies']),
       interfaces: interfaces,
       name: json['name'],
       key: json['key'],
       environment: json['environment'],
+      dependencies: List<String>.from(json['dependencies'] ?? []),
+      factoryMethodName: json['factoryMethodName'],
+      namedArgs: Map<String, String>.from(json['namedArgs'] ?? {}),
     );
   }
 
   @override
+  Map<String, dynamic> toJson() {
+    final json = super.toJson();
+    json.addAll({
+      'type': 'singleton',
+      'factoryMethodName': factoryMethodName,
+      'namedArgs': namedArgs,
+    });
+    return json;
+  }
+
+  @override
   String toString() {
-    return 'InstanceData{importPath: $importPath, className: $className, dependencies: $dependencies, interfaces: $interfaces, name: $name, key: $key, environment: $environment}';
+    return '$SingletonData{importPath: $importPath, className: $className, interfaces: $interfaces, name: $name, key: $key, environment: $environment}';
   }
 }
 
-class FactoryData extends TypeRegistration {
-  final List<String> dependencies;
-  final String? factoryMethod;
+class TransientData extends TypeRegistration {
+  final String? factoryMethodName;
   final Map<String, String> namedArgs;
 
-  FactoryData({
+  TransientData({
     required super.importPath,
     required super.className,
-    this.dependencies = const [],
-    this.factoryMethod,
-    this.namedArgs = const {},
+    required super.dependencies,
+    required this.factoryMethodName,
+    required this.namedArgs,
     super.interfaces,
     super.name,
     super.key,
@@ -188,24 +196,24 @@ class FactoryData extends TypeRegistration {
   Map<String, dynamic> toJson() {
     final json = super.toJson();
     json.addAll({
-      'dependencies': dependencies,
-      'factoryMethod': factoryMethod,
+      'type': 'transient',
+      'factoryMethod': factoryMethodName,
       'namedArgs': namedArgs,
     });
     return json;
   }
 
-  factory FactoryData.fromJson(Map<String, dynamic> json) {
+  factory TransientData.fromJson(Map<String, dynamic> json) {
     List<SuperTypeData> interfaces =
         (json['interfaces'] as List<dynamic>? ?? [])
             .map((e) => SuperTypeData.fromJson(e as Map<String, dynamic>))
             .toList();
 
-    return FactoryData(
+    return TransientData(
       importPath: ImportPath.fromJson(json['importPath']),
       className: json['className'],
       dependencies: List<String>.from(json['dependencies'] ?? []),
-      factoryMethod: json['factoryMethod'],
+      factoryMethodName: json['factoryMethod'],
       namedArgs: Map<String, String>.from(json['namedArgs'] ?? {}),
       interfaces: interfaces,
       name: json['name'],
@@ -216,31 +224,33 @@ class FactoryData extends TypeRegistration {
 
   @override
   String toString() {
-    return 'FactoryData{importPath: $importPath, className: $className, dependencies: $dependencies, factoryMethod: $factoryMethod, namedArgs: $namedArgs, interfaces: $interfaces, name: $name, key: $key, environment: $environment}';
+    return '$TransientData{importPath: $importPath, className: $className, dependencies: $dependencies, factoryMethod: $factoryMethodName, namedArgs: $namedArgs, interfaces: $interfaces, name: $name, key: $key, environment: $environment}';
   }
 }
 
 class LazyData extends TypeRegistration {
-  final List<String> dependencies;
   final String returnType;
+  final String? factoryMethodName;
 
   LazyData({
     required super.importPath,
     required super.className,
     required this.returnType,
-    this.dependencies = const [],
-    super.interfaces,
-    super.name,
-    super.key,
-    super.environment,
+    required this.factoryMethodName,
+    required super.dependencies,
+    required super.interfaces,
+    required super.name,
+    required super.key,
+    required super.environment,
   });
 
   @override
   Map<String, dynamic> toJson() {
     final json = super.toJson();
     json.addAll({
-      'dependencies': dependencies,
+      'type': 'lazy',
       'returnType': returnType,
+      'factoryMethod': factoryMethodName,
     });
     return json;
   }
@@ -255,6 +265,7 @@ class LazyData extends TypeRegistration {
       importPath: ImportPath.fromJson(json['importPath']),
       className: json['className'],
       returnType: json['returnType'] as String,
+      factoryMethodName: json['factoryMethod'],
       dependencies: List<String>.from(json['dependencies']),
       interfaces: interfaces,
       name: json['name'],
@@ -265,6 +276,6 @@ class LazyData extends TypeRegistration {
 
   @override
   String toString() {
-    return 'LazyData{importPath: $importPath, className: $className, returnType: $returnType, dependencies: $dependencies, interfaces: $interfaces, name: $name, key: $key, environment: $environment}';
+    return 'LazyData{importPath: $importPath, className: $className, returnType: $returnType, factoryMethodName: $factoryMethodName, dependencies: $dependencies, interfaces: $interfaces, name: $name, key: $key, environment: $environment}';
   }
 }

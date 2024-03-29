@@ -1,37 +1,90 @@
+import 'package:example/test_files/lazy_services.dart';
+import 'package:example/test_files/transient_services.dart';
 import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 import 'package:zef_di_inglue/zef_di_inglue.dart';
 
 import 'dependency_registration.g.dart';
-import 'test_files/services.dart';
+import 'test_files/singleton_services.dart';
 
 void main(List<String> arguments) {
   ServiceLocatorBuilder().withAdapter(InglueServiceLocatorAdapter()).build();
 
   registerDependencies();
 
-  final serviceA = ServiceLocator.instance.resolve<ServiceA>();
-  serviceA.doSomething();
+  resolveSingletons();
+  resolveTransients();
+  resolveLazies();
+}
 
-  final serviceB = ServiceLocator.instance.resolve<ServiceB>();
-  serviceB.doSomething();
+void resolveSingletons() {
+  final singletonNoDependencies =
+      ServiceLocator.instance.resolve<SingletonNoDependencies>();
+  singletonNoDependencies.doSomething();
 
-  final serviceC = ServiceLocator.instance.resolve<ServiceC>(namedArgs: {
+  final singletonWithFactory =
+      ServiceLocator.instance.resolve<SingletonWithFactory>();
+  singletonWithFactory.doSomething();
+
+  final singletonWithDependencies =
+      ServiceLocator.instance.resolve<SingletonWithDependencies>();
+  singletonWithDependencies.doSomething();
+
+  final singletonWithFactoryWithDependencies =
+      ServiceLocator.instance.resolve<SingletonWithFactoryWithDependencies>();
+  singletonWithFactoryWithDependencies.doSomething();
+}
+
+void resolveTransients() {
+  final transientNoDependencies =
+      ServiceLocator.instance.resolve<TransientNoDependencies>();
+  transientNoDependencies.doSomething();
+
+  final transientWithFactory =
+      ServiceLocator.instance.resolve<TransientWithFactory>();
+  transientWithFactory.doSomething();
+
+  final transientWithDependencies =
+      ServiceLocator.instance.resolve<TransientWithDependencies>();
+  transientWithDependencies.doSomething();
+
+  final transientWithFactoryWithDependencies =
+      ServiceLocator.instance.resolve<TransientWithFactoryWithDependencies>();
+  transientWithFactoryWithDependencies.doSomething();
+
+  final transientWithNamedArgs =
+      ServiceLocator.instance.resolve<TransientWithNamedArgs>(namedArgs: {
     'someValue': 5.0,
-    'anyDouble': 10.0,
   });
-  serviceC.doSomething();
+  transientWithNamedArgs.doSomething();
 
-  final serviceD = ServiceLocator.instance.resolve<ServiceD>(namedArgs: {
-    'anyDouble': 10.0,
-  });
-  serviceD.doSomething();
-
-  final allServices =
-      ServiceLocator.instance.resolveAll<AbstractService>(namedArgs: {
-    'anyDouble': 10.0,
+  final transientWithFactoryWithNamedArgs = ServiceLocator.instance
+      .resolve<TransientWithFactoryWithNamedArgs>(namedArgs: {
     'someValue': 5.0,
   });
-  for (var service in allServices) {
-    print('Got service: $service');
-  }
+  transientWithFactoryWithNamedArgs.doSomething();
+
+  final transientWithFactoryWithDependencyWithNamedArgs = ServiceLocator
+      .instance
+      .resolve<TransientWithFactoryWithDependencyWithNamedArgs>(namedArgs: {
+    'someValue': 5.0,
+  });
+  transientWithFactoryWithDependencyWithNamedArgs.doSomething();
+}
+
+void resolveLazies() {
+  final lazyNoDependencies =
+      ServiceLocator.instance.resolve<LazyNoDependencies>();
+  lazyNoDependencies.doSomething();
+
+  final lazyWithFactoryNoDependencies =
+      ServiceLocator.instance.resolve<LazyWithFactoryNoDependencies>();
+  lazyWithFactoryNoDependencies.doSomething();
+
+  final lazyWithDependencies =
+      ServiceLocator.instance.resolve<LazyWithDependencies>();
+  lazyWithDependencies.doSomething();
+
+  final lazyWithFactoryWithDependencies =
+      ServiceLocator.instance.resolve<LazyWithFactoryWithDependencies>();
+  lazyWithFactoryWithDependencies.doSomething();
 }

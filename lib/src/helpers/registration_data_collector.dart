@@ -1,8 +1,8 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:source_gen/source_gen.dart';
-import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 import 'package:zef_di_abstractions_generator/src/helpers/constructor_processor.dart';
+import 'package:zef_di_abstractions_generator/src/helpers/parameter_processor.dart';
 
 import '../models/annotation_attributes.dart';
 import '../models/import_path.dart';
@@ -17,10 +17,10 @@ class RegistrationDataCollector {
     for (var annotation in element.metadata) {
       var annotationReader = ConstantReader(annotation.computeConstantValue());
 
-      if (AnnotationProcessor.isRegisterInstance(annotationReader)) {
-        return _collectInstanceData(element, buildStep);
-      } else if (AnnotationProcessor.isRegisterFactory(annotationReader)) {
-        return _collectFactoryData(element, buildStep);
+      if (AnnotationProcessor.isRegisterSingleton(annotationReader)) {
+        return _collectSingletonData(element, buildStep);
+      } else if (AnnotationProcessor.isRegisterTransient(annotationReader)) {
+        return _collectTransientData(element, buildStep);
       } else if (AnnotationProcessor.isRegisterLazy(annotationReader)) {
         return _collectLazyData(element, buildStep);
       }
@@ -30,76 +30,106 @@ class RegistrationDataCollector {
     return null;
   }
 
-  static InstanceData _collectInstanceData(
-    ClassElement element,
+  static SingletonData _collectSingletonData(
+    ClassElement classElement,
     BuildStep buildStep,
   ) {
+    // Get the import path of the class
+    final ImportPath importPath =
+        ImportPathResolver.determineImportPathForClass(classElement, buildStep);
+
     // Get the super classes of the class
     final Set<SuperTypeData> superClasses =
-        ClassHierarchyExplorer.explore(element, buildStep);
+        ClassHierarchyExplorer.explore(classElement, buildStep);
 
-    // Get the constructor parameters of the class
-    final List<String> constructorParams =
-        ConstructorProcessor.getConstructorParams(element);
+    // Get the Constructor
+    final ConstructorElement constructor =
+        ConstructorProcessor.getConstructor(classElement);
+
+    // Get the factory method
+    final MethodElement? factoryMethod =
+        MethodProcessor.getAnnotatedFactoryMethod(classElement);
+    final String? factoryMethodName =
+        MethodProcessor.getFactoryMethodNameOrNull(factoryMethod);
+
+    // Get the injectable dependencies
+    List<String> dependencies = ParameterProcessor.getUnnamedParameters(
+      constructor: constructor,
+      method: factoryMethod,
+    );
+
+    // Get the named arguments
+    Map<String, String> namedArgs = ParameterProcessor.getNamedParameters(
+      constructor: constructor,
+      method: factoryMethod,
+    );
+
+    // Check if the class has named arguments. If so, throw an error
+    if (namedArgs.isNotEmpty) {
+      throw InvalidGenerationSourceError(
+        'Named arguments are not supported in Singleton classes',
+        element: classElement,
+      );
+    }
 
     // Get the annotation attributes
     final AnnotationAttributes attributes =
-        AnnotationProcessor.getAnnotationAttributes(element);
+        AnnotationProcessor.getAnnotationAttributes(classElement);
 
-    // Get the import path of the class
-    final ImportPath importPath =
-        ImportPathResolver.determineImportPathForClass(element, buildStep);
-
-    return InstanceData(
+    return SingletonData(
       importPath: importPath,
-      className: element.name,
-      dependencies: constructorParams,
       interfaces: superClasses.toList(),
+      className: classElement.name,
+      factoryMethodName: factoryMethodName,
+      dependencies: dependencies,
+      namedArgs: {},
       name: attributes.name,
       key: attributes.key,
       environment: attributes.environment,
     );
   }
 
-  static FactoryData _collectFactoryData(
-      ClassElement element, BuildStep buildStep) {
+  static TransientData _collectTransientData(
+    ClassElement classElement,
+    BuildStep buildStep,
+  ) {
+    // Get the import path of the class
+    final ImportPath importPath =
+        ImportPathResolver.determineImportPathForClass(classElement, buildStep);
+
     // Get the super classes of the class
     final Set<SuperTypeData> superClasses =
-        ClassHierarchyExplorer.explore(element, buildStep);
-
-    // Get the constructor parameters of the class
-    final List<String> constructorParams =
-        ConstructorProcessor.getConstructorParams(element);
+        ClassHierarchyExplorer.explore(classElement, buildStep);
 
     // Get the annotation attributes
     final AnnotationAttributes attributes =
-        AnnotationProcessor.getAnnotationAttributes(element);
+        AnnotationProcessor.getAnnotationAttributes(classElement);
 
-    // Get the import path of the class
-    final ImportPath importPath =
-        ImportPathResolver.determineImportPathForClass(element, buildStep);
+    // Get the Constructor
+    final ConstructorElement constructor =
+        ConstructorProcessor.getConstructor(classElement);
 
-    // Get the factory method name, if any
-    String? factoryMethodName = _findAnnotatedFactoryMethodName(element);
-    Map<String, String> namedArgs = {};
+    // Get the factory method
+    final MethodElement? factoryMethod =
+        MethodProcessor.getAnnotatedFactoryMethod(classElement);
+    final String? factoryMethodName =
+        MethodProcessor.getFactoryMethodNameOrNull(factoryMethod);
 
-    if (factoryMethodName != null) {
-      // Factory method is present, collect named arguments from it
-      MethodElement factoryMethod = element.getMethod(factoryMethodName)!;
-      namedArgs = MethodProcessor.getNamedParameters(factoryMethod);
-    } else {
-      // No factory method, collect named arguments from the constructor
-      ConstructorElement? constructor =
-          element.unnamedConstructor ?? element.constructors.first;
-      namedArgs = ConstructorProcessor.getNamedParameters(constructor);
-    }
+    List<String> dependencies = ParameterProcessor.getUnnamedParameters(
+      constructor: constructor,
+      method: factoryMethod,
+    );
+    Map<String, String> namedArgs = ParameterProcessor.getNamedParameters(
+      constructor: constructor,
+      method: factoryMethod,
+    );
 
-    return FactoryData(
-      interfaces: superClasses.toList(),
+    return TransientData(
       importPath: importPath,
-      className: element.name,
-      dependencies: constructorParams,
-      factoryMethod: factoryMethodName,
+      interfaces: superClasses.toList(),
+      className: classElement.name,
+      dependencies: dependencies,
+      factoryMethodName: factoryMethodName,
       namedArgs: namedArgs,
       name: attributes.name,
       key: attributes.key,
@@ -107,47 +137,49 @@ class RegistrationDataCollector {
     );
   }
 
-  static LazyData _collectLazyData(ClassElement element, BuildStep buildStep) {
+  static LazyData _collectLazyData(
+      ClassElement classElement, BuildStep buildStep) {
+    // Get the import path of the class
+    final ImportPath importPath =
+        ImportPathResolver.determineImportPathForClass(classElement, buildStep);
+
     // Get the super classes of the class
     final Set<SuperTypeData> superClasses =
-        ClassHierarchyExplorer.explore(element, buildStep);
+        ClassHierarchyExplorer.explore(classElement, buildStep);
 
-    // Get the constructor parameters of the class
-    final List<String> constructorParams =
-        ConstructorProcessor.getConstructorParams(element);
+    // Get the return type of the class
+    final returnType = classElement.name;
+
+    // Get the Constructor
+    final ConstructorElement constructor =
+        ConstructorProcessor.getConstructor(classElement);
+
+    // Get the factory method
+    final MethodElement? factoryMethod =
+        MethodProcessor.getAnnotatedFactoryMethod(classElement);
+    final String? factoryMethodName =
+        MethodProcessor.getFactoryMethodNameOrNull(factoryMethod);
+
+    // Get the injectable dependencies
+    final List<String> dependencies = ParameterProcessor.getUnnamedParameters(
+      constructor: constructor,
+      method: factoryMethod,
+    );
 
     // Get the annotation attributes
     final AnnotationAttributes attributes =
-        AnnotationProcessor.getAnnotationAttributes(element);
-
-    // Get the import path of the class
-    final ImportPath importPath =
-        ImportPathResolver.determineImportPathForClass(element, buildStep);
-
-    final returnType = element.name;
+        AnnotationProcessor.getAnnotationAttributes(classElement);
 
     return LazyData(
       importPath: importPath,
-      className: element.name,
+      className: classElement.name,
       returnType: returnType,
-      dependencies: constructorParams,
+      factoryMethodName: factoryMethodName,
+      dependencies: dependencies,
       interfaces: superClasses.toList(),
       name: attributes.name,
       key: attributes.key,
       environment: attributes.environment,
     );
-  }
-
-  static String? _findAnnotatedFactoryMethodName(ClassElement element) {
-    for (var method in element.methods) {
-      // Check if the method is annotated with @RegisterFactoryMethod
-      var annotation = TypeChecker.fromRuntime(RegisterFactoryMethod)
-          .firstAnnotationOfExact(method);
-      if (annotation != null) {
-        return method.name;
-      }
-    }
-    // Return null if no annotated factory method is found
-    return null;
   }
 }

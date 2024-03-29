@@ -5,12 +5,12 @@ import 'package:zef_di_abstractions/zef_di_abstractions.dart';
 import '../models/annotation_attributes.dart';
 
 class AnnotationProcessor {
-  static bool isRegisterInstance(ConstantReader annotation) =>
-      TypeChecker.fromRuntime(RegisterInstance)
+  static bool isRegisterSingleton(ConstantReader annotation) =>
+      TypeChecker.fromRuntime(RegisterSingleton)
           .isExactlyType(annotation.objectValue.type!);
 
-  static bool isRegisterFactory(ConstantReader annotation) =>
-      TypeChecker.fromRuntime(RegisterFactory)
+  static bool isRegisterTransient(ConstantReader annotation) =>
+      TypeChecker.fromRuntime(RegisterTransient)
           .isExactlyType(annotation.objectValue.type!);
 
   static bool isRegisterLazy(ConstantReader annotation) =>
@@ -19,9 +19,9 @@ class AnnotationProcessor {
 
   static bool isTypeRegistration(Element element) =>
       element.metadata.any((annotation) =>
-          TypeChecker.fromRuntime(RegisterInstance)
+          TypeChecker.fromRuntime(RegisterSingleton)
               .isAssignableFromType(annotation.computeConstantValue()!.type!) ||
-          TypeChecker.fromRuntime(RegisterFactory)
+          TypeChecker.fromRuntime(RegisterTransient)
               .isAssignableFromType(annotation.computeConstantValue()!.type!) ||
           TypeChecker.fromRuntime(RegisterLazy)
               .isAssignableFromType(annotation.computeConstantValue()!.type!));
@@ -33,8 +33,8 @@ class AnnotationProcessor {
   static AnnotationAttributes getAnnotationAttributes(Element element) {
     for (var annotation in element.metadata) {
       var annotationReader = ConstantReader(annotation.computeConstantValue());
-      if (AnnotationProcessor.isRegisterInstance(annotationReader) ||
-          AnnotationProcessor.isRegisterFactory(annotationReader) ||
+      if (AnnotationProcessor.isRegisterSingleton(annotationReader) ||
+          AnnotationProcessor.isRegisterTransient(annotationReader) ||
           AnnotationProcessor.isRegisterLazy(annotationReader)) {
         final String? name = annotationReader.read('_name').isNull
             ? null
