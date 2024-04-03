@@ -172,7 +172,7 @@ class CodeGenerationHelper {
 
   static String _getDependencies(TypeRegistration typeRegistration) {
     return typeRegistration.dependencies
-        .map((dep) => "ServiceLocator.I.resolve<$dep>(),")
+        .map((dep) => "ServiceLocator.I.resolve(),")
         .join();
   }
 

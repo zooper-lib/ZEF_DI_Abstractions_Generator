@@ -1,3 +1,7 @@
+## 2.0.1
+
+- Removed type argument when resolving a Singleton
+
 ## 2.0.0
 
 - Adapted to the renaming of the package `zef_di_abstractions`
