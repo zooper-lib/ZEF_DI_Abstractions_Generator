@@ -29,7 +29,7 @@ void registerDependencies() {
 
   ServiceLocator.I.registerSingleton<SingletonWithDependencies>(
     SingletonWithDependencies(
-      ServiceLocator.I.resolve<SingletonNoDependencies>(),
+      ServiceLocator.I.resolve(),
     ),
     interfaces: {SingletonService},
     name: null,
@@ -40,7 +40,7 @@ void registerDependencies() {
   ServiceLocator.I
       .registerSingletonFactory<SingletonWithFactoryWithDependencies>(
     (serviceLocator) => SingletonWithFactoryWithDependencies.create(
-      ServiceLocator.I.resolve<SingletonNoDependencies>(),
+      ServiceLocator.I.resolve(),
     ),
     interfaces: {SingletonService},
     name: null,
@@ -86,7 +86,7 @@ void registerDependencies() {
   ServiceLocator.I.registerLazy<LazyWithDependencies>(
     Lazy<LazyWithDependencies>(
       factory: () => LazyWithDependencies(
-        ServiceLocator.I.resolve<LazyNoDependencies>(),
+        ServiceLocator.I.resolve(),
       ),
     ),
     interfaces: {LazyServices},
@@ -204,8 +204,8 @@ void registerDependencies() {
   ServiceLocator.I.registerLazy<ModuleWithFactoryWithDependencies>(
     Lazy<ModuleWithFactoryWithDependencies>(
         factory: () => ModuleWithFactoryWithDependencies.create(
-              ServiceLocator.I.resolve<ModuleNoDependencies>(),
-              ServiceLocator.I.resolve<ModuleWithDependency>(),
+              ServiceLocator.I.resolve(),
+              ServiceLocator.I.resolve(),
             )),
     interfaces: null,
     name: null,
