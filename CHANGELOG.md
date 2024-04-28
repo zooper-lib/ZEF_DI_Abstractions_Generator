@@ -1,3 +1,7 @@
+## 2.0.2
+
+- Deprecated this package
+
 ## 2.0.1
 
 - Removed type argument when resolving a Singleton
