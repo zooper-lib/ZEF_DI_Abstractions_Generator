@@ -2,6 +2,9 @@
 
 A code generator for the library [zef_di_abstractions](https://pub.dev/packages/zef_di_abstractions). It is used to automatically generate the service registrations based on annotations.
 
+> [!CAUTION]
+> This project is discontinued, as it got renamed. Check out the new package [zef_di_core_generator](https://pub.dev/packages/zef_di_core_generator) instead.
+
 ## Features
 
 - **Automatic Service Registration**: Generates service registration code automatically, based on custom annotations within your project.
